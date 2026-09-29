@@ -1,1 +1,35 @@
-delete file
+name: Build APK
+on:
+  workflow_dispatch:
+  push:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip project
+        run: |
+          mkdir src
+          unzip -q ./*.zip -d src
+          P=$(dirname "$(find src -name settings.gradle.kts | head -1)")
+          echo "PROJ=$P" >> $GITHUB_ENV
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Accept Android licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Unit tests
+        continue-on-error: true
+        working-directory: ${{ env.PROJ }}
+        run: gradle testDebugUnitTest --stacktrace
+      - name: Build debug APK
+        working-directory: ${{ env.PROJ }}
+        run: gradle assembleDebug --stacktrace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: personalai-debug-apk
+          path: ${{ env.PROJ }}/app/build/outputs/apk/debug/*.apk
