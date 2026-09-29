@@ -13,6 +13,10 @@ jobs:
           unzip -q ./*.zip -d src
           P=$(dirname "$(find src -name settings.gradle.kts | head -1)")
           echo "PROJ=$P" >> $GITHUB_ENV
+      - name: Fix dependency versions
+        run: |
+          sed -i 's/executorch-android:1.5.0/executorch-android:1.4.0/; s/onnxruntime-android:1.30.0/onnxruntime-android:1.27.0/' "$PROJ/app/build.gradle.kts"
+          grep -nE "executorch|onnxruntime" "$PROJ/app/build.gradle.kts"
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
