@@ -1,35 +1,60 @@
-name: Build APK
+name: Android build
 on:
   workflow_dispatch:
   push:
+  pull_request:
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Unzip project
+
+      - name: Extract Android project
         run: |
-          mkdir src
-          unzip -q ./*.zip -d src
-          P=$(dirname "$(find src -name settings.gradle.kts | head -1)")
-          echo "PROJ=$P" >> $GITHUB_ENV
-      - uses: actions/setup-java@v4
+          archive=$(find . -maxdepth 1 -type f -name '*.zip' -print -quit)
+          test -n "$archive"
+          mkdir source
+          unzip -q "$archive" -d source
+          project=$(dirname "$(find source -name settings.gradle.kts -print -quit)")
+          test -n "$project"
+          echo "PROJECT_DIR=$project" >> "$GITHUB_ENV"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - name: Accept Android licenses
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
-      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK platform and build tools
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Set up Gradle 8.11.1
+        uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
+
+      # The archived project does not include gradlew or gradle-wrapper.jar.
+      # Create them with the provisioned Gradle before invoking the wrapper.
+      - name: Create Gradle wrapper
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: gradle wrapper --gradle-version 8.11.1 --distribution-type bin
+
       - name: Unit tests
-        continue-on-error: true
-        working-directory: ${{ env.PROJ }}
-        run: gradle testDebugUnitTest --stacktrace
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: ./gradlew testDebugUnitTest --stacktrace
+
       - name: Build debug APK
-        working-directory: ${{ env.PROJ }}
-        run: gradle assembleDebug --stacktrace
-      - uses: actions/upload-artifact@v4
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
         with:
           name: personalai-debug-apk
-          path: ${{ env.PROJ }}/app/build/outputs/apk/debug/*.apk
+          path: ${{ env.PROJECT_DIR }}/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
