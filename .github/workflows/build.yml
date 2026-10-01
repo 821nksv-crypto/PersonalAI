@@ -866,7 +866,14 @@ jobs:
                   for line in t.splitlines():
                       if "Privacy-first setup" in line or "Your Personal AI" in line or "SharedPreferences" in line or "onboarding" in line.lower():
                           print("  ", line[:240])
-          print("Source compatibility patches applied.")
+          print("===== DOCUMENT SUMMARY DIAGNOSTIC =====")
+          for fp in root.rglob("*.kt"):
+              name = fp.name.lower()
+              if any(k in name for k in ("document", "chat", "summary", "rag")):
+                  print(f"===== FILE {fp} =====")
+                  print(fp.read_text(errors="replace"))
+          print("===== END DOCUMENT SUMMARY DIAGNOSTIC =====")
+                    print("Source compatibility patches applied.")
           
           PY
           P=$(dirname "$(find src -name settings.gradle.kts | head -1)")
