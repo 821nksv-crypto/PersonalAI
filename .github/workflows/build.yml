@@ -188,41 +188,7 @@ jobs:
                   "m.generate(applySystemInstructions(prompt), config, callback)",
                   count=2)
 
-          replace("ExecuTorchLocalEngine.kt",
-                  """        val m = module
-          if (m == null) {
-              onError(IllegalStateException(loadError ?: "Local model is not loaded."))
-              return
-          }
-          if (!generating.compareAndSet(false, true)) {""",
-                  """        if (!generating.compareAndSet(false, true)) {""")
-          
-          replace("ExecuTorchLocalEngine.kt",
-                  """        Thread {
-              val output = StringBuilder()
-              try {""",
-                  """        Thread {
-              val m = module ?: try {
-                  val config = org.pytorch.executorch.extension.llm.LlmModuleConfig.create()
-                      .modulePath(modelFile.absolutePath)
-                      .tokenizerPath(tokenizerFile.absolutePath)
-                      .temperature(0.7f)
-                      .modelType(org.pytorch.executorch.extension.llm.LlmModuleConfig.MODEL_TYPE_TEXT)
-                      .loadMode(org.pytorch.executorch.extension.llm.LlmModuleConfig.LOAD_MODE_MMAP)
-                      .build()
-                  val loaded = org.pytorch.executorch.extension.llm.LlmModule(config)
-                  val status = loaded.load()
-                  if (status != 0) throw IllegalStateException("ExecuTorch model load error: $status")
-                  module = loaded
-                  loaded
-              } catch (t: Throwable) {
-                  generating.set(false)
-                  onError(t)
-                  return@Thread
-              }
-              val output = StringBuilder()
-              try {""")
-          
+
           replace("ExecuTorchLocalEngine.kt",
                   "    fun stopStreaming() {",
                   """    private fun applySystemInstructions(prompt: String): String {
@@ -830,7 +796,7 @@ jobs:
                       }
                   }
               ) { padding ->
-                  Box(Modifier.fillMaxSize().padding(padding)) { content() }
+                  Box(Modifier.fillMaxSize().padding(padding)) { OfflineTheme { content() } }
               }
           }
           
