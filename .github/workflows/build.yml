@@ -178,26 +178,11 @@ jobs:
           
 
           
-          replace("ExecuTorchLocalEngine.kt",
-                  """    init {
-              try {
-                  val config = org.pytorch.executorch.extension.llm.LlmModuleConfig.create()
-                      .modulePath(modelFile.absolutePath)
-                      .tokenizerPath(tokenizerFile.absolutePath)
-                      .temperature(0.7f)
-                      .modelType(org.pytorch.executorch.extension.llm.LlmModuleConfig.MODEL_TYPE_TEXT)
-                      .loadMode(org.pytorch.executorch.extension.llm.LlmModuleConfig.LOAD_MODE_MMAP)
-                      .build()
-                  val m = org.pytorch.executorch.extension.llm.LlmModule(config)
-                  val status = m.load()
-                  if (status == 0) module = m else loadError = "ExecuTorch load error: $status"
-              } catch (t: Throwable) {
-                  loadError = t.message ?: t.javaClass.simpleName
-              }
-          }""",
-                  """    init { }
-          """)
-          
+          print("EXECUTORCH SOURCE BEGIN")
+          ep = file("ExecuTorchLocalEngine.kt")
+          print(ep.read_text())
+          print("EXECUTORCH SOURCE END")
+
           replace("ExecuTorchLocalEngine.kt",
                   "m.generate(prompt, config, callback)",
                   "m.generate(applySystemInstructions(prompt), config, callback)",
