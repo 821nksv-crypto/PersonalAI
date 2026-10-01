@@ -19,44 +19,6 @@ jobs:
           
           root = next(p.parent for p in Path("src").rglob("settings.gradle.kts"))
 
-          # Diagnostic: expose the model/chat wiring from the bundled MVP source so we can
-          # verify the installed-model path and readiness check before patching it.
-          for needle in ("PersonalAiHostActivity.kt", "ChatScreen.kt", "LocalModelManager.kt",
-                         "InstalledModelPackageStore.kt", "ModelImportService.kt",
-                         "ModelImportController.kt", "LocalLlmEngineAdapter.kt", "LocalModelEngine.kt"):
-              for fp in root.rglob(needle):
-                  print(f"===== SOURCE {fp} =====")
-                  lines = fp.read_text(errors="replace").splitlines()
-                  for i, line in enumerate(lines, 1):
-                      low = line.lower()
-                      if any(k in low for k in ("modelready", "model ready", "installed()", "installedmodels",
-                                                "selectedmodel", "modelfile", "tokenizerfile", "localmodelengine",
-                                                "local model", "unavailable", "coordinator.models", "engine")):
-                          start = max(1, i-2); end = min(len(lines), i+3)
-                          print(f"--- lines {start}-{end} ---")
-                          for j in range(start, end+1): print(f"{j}: {lines[j-1]}")
-          print("===== TARGETED ENGINE/CHAT REFERENCES =====")
-          needles = ("ChatHostScreen(", "UnavailableLocalEngine", "ExecuTorchLocalEngine(",
-                     "LocalModelManager(", "LocalModelEngine", "modelReady", "Local model unavailable",
-                     "modelFile", "tokenizerFile", "models/installed", "coordinator.models")
-          for fp in root.rglob("*.kt"):
-              lines = fp.read_text(errors="replace").splitlines()
-              hits = [i for i, line in enumerate(lines, 1) if any(n in line for n in needles)]
-              if hits:
-                  print(f"===== TARGET {fp} =====")
-                  shown = set()
-                  for i in hits:
-                      for j in range(max(1, i-2), min(len(lines), i+2)+1):
-                          if j not in shown:
-                              shown.add(j); print(f"{j}: {lines[j-1]}")
-          for needle in ("ModelRuntimeResolver.kt", "InstalledModelPackage.kt", "AtomicModelInstaller.kt", "ModelImportService.kt", "ChatHostScreen.kt", "ModelLibraryController.kt"):
-              for fp in root.rglob(needle):
-                  print(f"===== FULL SOURCE {fp} =====")
-                  print(fp.read_text(errors="replace"))
-          print("===== END FULL SOURCE DUMP =====")
-          print("===== END TARGETED ENGINE/CHAT REFERENCES =====")
-          print("===== END MODEL/CHAT DIAGNOSTIC =====")
-          
           def file(name):
               matches = list(root.rglob(name))
               if len(matches) != 1:
