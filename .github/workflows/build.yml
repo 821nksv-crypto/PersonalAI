@@ -14,7 +14,7 @@ jobs:
           mkdir -p src
           unzip -q ./*.zip -d src
           python3 <<'PY'
-          
+          import re
           from pathlib import Path
           
           root = next(p.parent for p in Path("src").rglob("settings.gradle.kts"))
