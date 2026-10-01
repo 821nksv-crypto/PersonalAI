@@ -1,6 +1,7 @@
 package com.personalai.mvp.settings
 
 import android.content.Context
+import java.io.File
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -67,7 +68,10 @@ fun SettingsScreen(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Button(
                         onClick = {
-                            prefs.edit().putString("ai_instructions", instructions.trim()).apply()
+                            val value = instructions.trim()
+                            prefs.edit().putString("ai_instructions", value).apply()
+                            val instructionFile = File(context.filesDir, "personalai_ai_instructions.txt")
+                            if (value.isBlank()) instructionFile.delete() else instructionFile.writeText(value)
                             saved = true
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = Accent)
