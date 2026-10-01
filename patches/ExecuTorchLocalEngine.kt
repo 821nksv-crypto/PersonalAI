@@ -101,7 +101,7 @@ class ExecuTorchLocalEngine(
                 val m = loadModule()
                 val config = LlmGenerationConfig.create()
                     .seqLen(2048)
-                    .maxNewTokens(512)
+                    .maxNewTokens(256)
                     .temperature(0.7f)
                     .echo(false)
                     .build()
@@ -110,7 +110,10 @@ class ExecuTorchLocalEngine(
                         output.append(token)
                         mainHandler.post { runCatching { onToken(token) } }
                     }
-                    override fun onStats(statsJson: String) { val text = output.toString(); mainHandler.post { runCatching { onComplete(text) } } }
+                    override fun onStats(statsJson: String) {
+                        val text = output.toString()
+                        mainHandler.post { runCatching { onComplete(text) } }
+                    }
                     override fun onError(errorCode: Int, message: String) {
                         mainHandler.post { runCatching { onError(IllegalStateException("ExecuTorch error $errorCode: $message")) } }
                     }
@@ -145,8 +148,6 @@ class ExecuTorchLocalEngine(
         return prompt
     }
 
-    // "Ready" means the verified local model package is present on disk.
-    // The native LLM module is intentionally loaded lazily on the generation thread.
     override fun isReady(): Boolean =
         modelFile.isFile && modelFile.length() > 0L && tokenizerFile.isFile && tokenizerFile.length() > 0L && loadError == null
 
