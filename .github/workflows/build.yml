@@ -52,7 +52,7 @@ jobs:
           bf = candidates[0]
           bt = bf.read_text()
           if "noCompress += [\"pte\"]" not in bt:
-              bt = bt.replace("android {", "android {\\n    androidResources {\\n        noCompress += [\"pte\"]\\n    }", 1)
+              bt = bt.replace("android {", "android {\n    androidResources {\n        noCompress += [\"pte\"]\n    }", 1)
               bf.write_text(bt)
 
           def replace(name, old, new, count=1):
