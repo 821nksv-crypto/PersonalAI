@@ -859,6 +859,10 @@ jobs:
           P=$(dirname "$(find src -name settings.gradle.kts | head -1)")
           mkdir -p "$P/app/src/main/java/com/personalai/mvp/settings"
           cp "$GITHUB_WORKSPACE/patches/SettingsScreen.kt" "$P/app/src/main/java/com/personalai/mvp/settings/SettingsScreen.kt"
+          mkdir -p "$P/app/src/main/java/com/personalai/mvp/models"
+          cp "$GITHUB_WORKSPACE/patches/ModelDownloader.kt" "$P/app/src/main/java/com/personalai/mvp/models/ModelDownloader.kt"
+          mkdir -p "$P/app/src/main/java/com/personalai/mvp/importer"
+          cp "$GITHUB_WORKSPACE/patches/ModelImportScreen.kt" "$P/app/src/main/java/com/personalai/mvp/importer/ModelImportScreen.kt"
           MANIFEST="$P/app/src/main/AndroidManifest.xml"
           python3 - "$MANIFEST" <<'PY'
           import sys
@@ -874,14 +878,9 @@ jobs:
               p.write_text(s)
           print("Ensured INTERNET permission in", p)
           PY
+          rm -rf "$P/app/src/main/assets/models"
           mkdir -p "$P/app/src/main/assets/models"
-          echo "Downloading bundled Qwen3 model for APK packaging..."
-          curl -L --fail --retry 5 --retry-delay 5 -o "$P/app/src/main/assets/models/Qwen3-1.7B-8da4w-gptq-2k.pte" "https://huggingface.co/experimentalmachines/Qwen3-1.7B-ExecuTorch/resolve/main/xnnpack/Qwen3-1.7B-8da4w-gptq-2k.pte"
-          curl -L --fail --retry 5 --retry-delay 5 -o "$P/app/src/main/assets/models/tokenizer.json" "https://huggingface.co/experimentalmachines/Qwen3-1.7B-ExecuTorch/resolve/main/tokenizer.json"
-          test -s "$P/app/src/main/assets/models/Qwen3-1.7B-8da4w-gptq-2k.pte"
-          test -s "$P/app/src/main/assets/models/tokenizer.json"
-          echo "Bundled model size: $(du -h "$P/app/src/main/assets/models/Qwen3-1.7B-8da4w-gptq-2k.pte" | cut -f1)"
-          echo "Bundled tokenizer size: $(du -h "$P/app/src/main/assets/models/tokenizer.json" | cut -f1)"
+          echo "No model bundled: Qwen3 0.6B downloads on demand from the Models screen."
           echo "PROJ=$P" >> "$GITHUB_ENV"
 
       - uses: actions/setup-java@v4
