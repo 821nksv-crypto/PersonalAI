@@ -1,0 +1,9 @@
+name: CI Probe
+on:
+  push:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ruby -e 'require "yaml"; YAML.load_file(".github/workflows/build.yml"); puts "YAML OK"'
