@@ -304,11 +304,8 @@ jobs:
               downloadProgress: Float,
               downloadStatus: String
           ) {
-              LaunchedEffect(installedModels, downloading) {
-                  if (installedModels.isEmpty() && !downloading) {
-                      onDownload()
-                  }
-              }
+              // Do not prepare the 1.2+ GB model automatically during app startup.
+              // The user can start model preparation from this screen after the UI is responsive.
               Column(
                   Modifier.fillMaxSize().padding(16.dp),
                   verticalArrangement = Arrangement.spacedBy(12.dp)
