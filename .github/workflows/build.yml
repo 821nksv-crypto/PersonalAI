@@ -878,6 +878,7 @@ jobs:
           cp "$GITHUB_WORKSPACE/patches/ModelDownloader.kt" "$P/app/src/main/java/com/personalai/mvp/models/ModelDownloader.kt"
           mkdir -p "$P/app/src/main/java/com/personalai/mvp/importer"
           cp "$GITHUB_WORKSPACE/patches/ModelImportScreen.kt" "$P/app/src/main/java/com/personalai/mvp/importer/ModelImportScreen.kt"
+          mkdir -p "$P/app/src/main/java/com/personalai/mvp/ai"
           cp "$GITHUB_WORKSPACE/patches/ExecuTorchLocalEngine.kt" "$P/app/src/main/java/com/personalai/mvp/ai/ExecuTorchLocalEngine.kt"
           MANIFEST="$P/app/src/main/AndroidManifest.xml"
           python3 - "$MANIFEST" <<'PY'
