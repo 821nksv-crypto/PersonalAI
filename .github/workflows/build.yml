@@ -138,9 +138,12 @@ jobs:
                   "import androidx.lifecycle.LiveData\nimport androidx.lifecycle.map")
           
           replace("OnnxMiniLmEmbedder.kt",
+                  "        OnnxTensor.createTensor(env, LongBuffer.wrap(inputIds), longArrayOf(1, maxLength)).use { tIds ->",
+                  "        return OnnxTensor.createTensor(env, LongBuffer.wrap(inputIds), longArrayOf(1L, maxLength.toLong())).use { tIds ->")
+          replace("OnnxMiniLmEmbedder.kt",
                   "longArrayOf(1, maxLength)",
                   "longArrayOf(1L, maxLength.toLong())",
-                  count=3)
+                  count=2)
           
           replace("ModelInstallVerifier.kt",
                   "data class VerificationResult(val ok: Boolean, val reason: String)\n\n",
