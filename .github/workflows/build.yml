@@ -175,9 +175,9 @@ jobs:
           ) {
               companion object {
                   private const val MODEL_URL =
-                      "https://huggingface.co/experimentalmachines/Qwen3-1.7B-ExecuTorch/resolve/main/xnnpack/Qwen3-1.7B-8da4w-2k.pte"
+                      "https://huggingface.co/experimentalmachines/Qwen3-1.7B-ExecuTorch/resolve/main/xnnpack/Qwen3-1.7B-8da4w-2k.pte?download=true"
                   private const val TOKENIZER_URL =
-                      "https://huggingface.co/experimentalmachines/Qwen3-1.7B-ExecuTorch/resolve/main/tokenizer.json"
+                      "https://huggingface.co/experimentalmachines/Qwen3-1.7B-ExecuTorch/resolve/main/tokenizer.json?download=true"
                   private const val MODEL_FILE = "Qwen3-1.7B-8da4w-2k.pte"
                   private const val TOKENIZER_FILE = "tokenizer.json"
                   private const val MODEL_ID = "qwen3-1.7b-xnnpack-8da4w-2k"
@@ -533,6 +533,21 @@ jobs:
           
           PY
           P=$(dirname "$(find src -name settings.gradle.kts | head -1)")
+          MANIFEST="$P/app/src/main/AndroidManifest.xml"
+          python3 - "$MANIFEST" <<'PY'
+          import sys
+          from pathlib import Path
+          p = Path(sys.argv[1])
+          s = p.read_text()
+          permission = '<uses-permission android:name="android.permission.INTERNET" />'
+          if permission not in s:
+              marker = '<application'
+              if marker not in s:
+                  raise SystemExit(f"Could not find <application> in {p}")
+              s = s.replace(marker, permission + "\\n    " + marker, 1)
+              p.write_text(s)
+          print("Ensured INTERNET permission in", p)
+          PY
           echo "PROJ=$P" >> "$GITHUB_ENV"
 
       - uses: actions/setup-java@v4
