@@ -157,95 +157,95 @@ jobs:
 
           
           write_new("app/src/main/java/com/personalai/mvp/models/ModelDownloader.kt", """package com.personalai.mvp.models
-
-import android.content.Context
-import com.personalai.mvp.importer.ImportResult
-import java.io.File
-import java.io.FileOutputStream
-import java.util.UUID
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import com.personalai.mvp.model.ModelVerifier
-
-class ModelDownloader(
-    private val context: Context,
-    private val importService: ModelImportService
-) {
-    companion object {
-        private const val MODEL_FILE = "Qwen3-1.7B-8da4w-2k.pte"
-        private const val TOKENIZER_FILE = "tokenizer.json"
-        private const val MODEL_ID = "qwen3-1.7b-xnnpack-8da4w-2k"
-        private const val MODEL_VERSION = "1.0"
-    }
-
-    suspend fun downloadAndInstall(
-        onProgress: (downloaded: Long, total: Long) -> Unit = { _, _ -> }
-    ): String = withContext(Dispatchers.IO) {
-        val modelsDir = File(context.filesDir, "models/incoming").apply { mkdirs() }
-        val model = File(modelsDir, MODEL_FILE)
-        val tokenizer = File(modelsDir, TOKENIZER_FILE)
-
-        if (!model.exists() || model.length() == 0L) {
-            copyBundledAsset("models/$MODEL_FILE", model, onProgress)
-        }
-        if (!tokenizer.exists() || tokenizer.length() == 0L) {
-            copyBundledAsset("models/$TOKENIZER_FILE", tokenizer) { done, total ->
-                onProgress(done, total)
-            }
-        }
-
-        require(model.isFile && model.length() > 0) { "Bundled model is missing or empty." }
-        require(tokenizer.isFile && tokenizer.length() > 0) { "Bundled tokenizer is missing or empty." }
-
-        val manifest = JSONObject()
-            .put("id", MODEL_ID)
-            .put("displayName", "Qwen3 1.7B • XNNPACK 2K")
-            .put("version", MODEL_VERSION)
-            .put("runtime", "executorch")
-            .put("architecture", "arm64-v8a")
-            .put("fileName", MODEL_FILE)
-            .put("sizeBytes", model.length())
-            .put("sha256", ModelVerifier.sha256(model))
-            .put("tokenizerFileName", TOKENIZER_FILE)
-            .put("tokenizerSha256", ModelVerifier.sha256(tokenizer))
-
-        val manifestFile = File(modelsDir, "qwen3-1.7b-manifest.json")
-        manifestFile.writeText(manifest.toString())
-
-        val pair = SelectedModelPair(UUID.randomUUID().toString(), model, manifestFile, tokenizer)
-        when (val result = importService.verifyAndInstall(pair)) {
-            is ImportResult.Success -> result.message
-            is ImportResult.Failure -> throw IllegalStateException(result.message)
-            is ImportResult.Cancelled -> throw IllegalStateException("Model installation cancelled.")
-        }
-    }
-
-    private fun copyBundledAsset(
-        assetPath: String,
-        destination: File,
-        onProgress: (Long, Long) -> Unit = { _, _ -> }
-    ) {
-        destination.parentFile?.mkdirs()
-        context.assets.open(assetPath).use { input ->
-            FileOutputStream(destination).use { output ->
-                val buffer = ByteArray(1024 * 1024)
-                var copied = 0L
-                val total = try { input.available().toLong() } catch (_: Throwable) { -1L }
-                while (true) {
-                    val n = input.read(buffer)
-                    if (n < 0) break
-                    output.write(buffer, 0, n)
-                    copied += n
-                    onProgress(copied, total)
-                }
-                output.fd.sync()
-            }
-        }
-    }
-}
-""")
-
+          
+          import android.content.Context
+          import com.personalai.mvp.importer.ImportResult
+          import java.io.File
+          import java.io.FileOutputStream
+          import java.util.UUID
+          import kotlinx.coroutines.Dispatchers
+          import kotlinx.coroutines.withContext
+          import org.json.JSONObject
+          import com.personalai.mvp.model.ModelVerifier
+          
+          class ModelDownloader(
+              private val context: Context,
+              private val importService: ModelImportService
+          ) {
+              companion object {
+                  private const val MODEL_FILE = "Qwen3-1.7B-8da4w-2k.pte"
+                  private const val TOKENIZER_FILE = "tokenizer.json"
+                  private const val MODEL_ID = "qwen3-1.7b-xnnpack-8da4w-2k"
+                  private const val MODEL_VERSION = "1.0"
+              }
+          
+              suspend fun downloadAndInstall(
+                  onProgress: (downloaded: Long, total: Long) -> Unit = { _, _ -> }
+              ): String = withContext(Dispatchers.IO) {
+                  val modelsDir = File(context.filesDir, "models/incoming").apply { mkdirs() }
+                  val model = File(modelsDir, MODEL_FILE)
+                  val tokenizer = File(modelsDir, TOKENIZER_FILE)
+          
+                  if (!model.exists() || model.length() == 0L) {
+                      copyBundledAsset("models/$MODEL_FILE", model, onProgress)
+                  }
+                  if (!tokenizer.exists() || tokenizer.length() == 0L) {
+                      copyBundledAsset("models/$TOKENIZER_FILE", tokenizer) { done, total ->
+                          onProgress(done, total)
+                      }
+                  }
+          
+                  require(model.isFile && model.length() > 0) { "Bundled model is missing or empty." }
+                  require(tokenizer.isFile && tokenizer.length() > 0) { "Bundled tokenizer is missing or empty." }
+          
+                  val manifest = JSONObject()
+                      .put("id", MODEL_ID)
+                      .put("displayName", "Qwen3 1.7B • XNNPACK 2K")
+                      .put("version", MODEL_VERSION)
+                      .put("runtime", "executorch")
+                      .put("architecture", "arm64-v8a")
+                      .put("fileName", MODEL_FILE)
+                      .put("sizeBytes", model.length())
+                      .put("sha256", ModelVerifier.sha256(model))
+                      .put("tokenizerFileName", TOKENIZER_FILE)
+                      .put("tokenizerSha256", ModelVerifier.sha256(tokenizer))
+          
+                  val manifestFile = File(modelsDir, "qwen3-1.7b-manifest.json")
+                  manifestFile.writeText(manifest.toString())
+          
+                  val pair = SelectedModelPair(UUID.randomUUID().toString(), model, manifestFile, tokenizer)
+                  when (val result = importService.verifyAndInstall(pair)) {
+                      is ImportResult.Success -> result.message
+                      is ImportResult.Failure -> throw IllegalStateException(result.message)
+                      is ImportResult.Cancelled -> throw IllegalStateException("Model installation cancelled.")
+                  }
+              }
+          
+              private fun copyBundledAsset(
+                  assetPath: String,
+                  destination: File,
+                  onProgress: (Long, Long) -> Unit = { _, _ -> }
+              ) {
+                  destination.parentFile?.mkdirs()
+                  context.assets.open(assetPath).use { input ->
+                      FileOutputStream(destination).use { output ->
+                          val buffer = ByteArray(1024 * 1024)
+                          var copied = 0L
+                          val total = try { input.available().toLong() } catch (_: Throwable) { -1L }
+                          while (true) {
+                              val n = input.read(buffer)
+                              if (n < 0) break
+                              output.write(buffer, 0, n)
+                              copied += n
+                              onProgress(copied, total)
+                          }
+                          output.fd.sync()
+                      }
+                  }
+              }
+          }
+          """)
+          
           replace("ModelImportScreen.kt",
                   "package com.personalai.mvp.importer",
                   """package com.personalai.mvp.importer""",
