@@ -175,12 +175,12 @@ jobs:
           ) {
               companion object {
                   private const val MODEL_URL =
-                      "https://huggingface.co/experimentalmachines/Qwen3-0.6B-ExecuTorch/resolve/main/xnnpack/Qwen3-0.6B-8da4w-2k.pte"
+                      "https://huggingface.co/experimentalmachines/Qwen3-1.7B-ExecuTorch/resolve/main/xnnpack/Qwen3-1.7B-8da4w-2k.pte"
                   private const val TOKENIZER_URL =
-                      "https://huggingface.co/experimentalmachines/Qwen3-0.6B-ExecuTorch/resolve/main/tokenizer.json"
-                  private const val MODEL_FILE = "Qwen3-0.6B-8da4w-2k.pte"
+                      "https://huggingface.co/experimentalmachines/Qwen3-1.7B-ExecuTorch/resolve/main/tokenizer.json"
+                  private const val MODEL_FILE = "Qwen3-1.7B-8da4w-2k.pte"
                   private const val TOKENIZER_FILE = "tokenizer.json"
-                  private const val MODEL_ID = "qwen3-0.6b-xnnpack-8da4w-2k"
+                  private const val MODEL_ID = "qwen3-1.7b-xnnpack-8da4w-2k"
                   private const val LARGE_MODEL_URL =
                       "https://huggingface.co/experimentalmachines/Qwen3-1.7B-ExecuTorch/resolve/main/xnnpack/Qwen3-1.7B-8da4w-2k.pte"
                   private const val LARGE_TOKENIZER_URL =
@@ -194,8 +194,8 @@ jobs:
                   onProgress: (downloaded: Long, total: Long) -> Unit = { _, _ -> }
               ): String = withContext(Dispatchers.IO) {
                   val modelsDir = File(context.filesDir, "models/incoming").apply { mkdirs() }
-                  if (modelsDir.usableSpace < 800L * 1024L * 1024L) {
-                      throw IllegalStateException("At least 800 MB of free app storage is required.")
+                  if (modelsDir.usableSpace < 1700L * 1024L * 1024L) {
+                      throw IllegalStateException("At least 1700 MB of free app storage is required.")
                   }
           
                   val model = File(modelsDir, MODEL_FILE)
@@ -216,7 +216,7 @@ jobs:
           
                       val manifest = JSONObject()
                           .put("id", MODEL_ID)
-                          .put("displayName", "Qwen3 0.6B • XNNPACK 2K")
+                          .put("displayName", "Qwen3 1.7B • XNNPACK 2K")
                           .put("version", MODEL_VERSION)
                           .put("runtime", "executorch")
                           .put("architecture", "arm64-v8a")
@@ -312,7 +312,7 @@ jobs:
               ) {
                   Text("Local Models", style = MaterialTheme.typography.headlineSmall)
                   Text(
-                      "Recommended: Qwen3 0.6B, quantized for ExecuTorch/XNNPACK. " +
+                      "Recommended: Qwen3 1.7B, quantized for ExecuTorch/XNNPACK. " +
                           "It downloads once and then runs locally.",
                       style = MaterialTheme.typography.bodyMedium
                   )
@@ -321,7 +321,7 @@ jobs:
                       enabled = !downloading,
                       modifier = Modifier.fillMaxWidth()
                   ) {
-                      Text(if (downloading) "Downloading model…" else "Download Recommended Model")
+                      Text(if (downloading) "Downloading model…" else "Download Qwen3 1.7B • 2K (~1.28 GB)")
                   }
                   if (downloading) {
                       LinearProgressIndicator(
