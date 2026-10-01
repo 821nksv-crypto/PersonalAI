@@ -515,7 +515,7 @@ jobs:
                     downloadStatus = downloadStatus,""")
           
 
-                    print("Source compatibility patches applied.")
+          print("Source compatibility patches applied.")
           
           PY
           P=$(dirname "$(find src -name settings.gradle.kts | head -1)")
