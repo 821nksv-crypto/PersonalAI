@@ -142,6 +142,10 @@ class ExecuTorchLocalEngine(
         return prompt
     }
 
-    override fun isReady(): Boolean = module != null
+    // "Ready" means the verified local model package is present on disk.
+    // The native LLM module is intentionally loaded lazily on the generation thread.
+    override fun isReady(): Boolean =
+        modelFile.isFile && modelFile.length() > 0L && tokenizerFile.isFile && tokenizerFile.length() > 0L && loadError == null
+
     override fun modelName(): String = modelFile.name
 }
