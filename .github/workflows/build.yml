@@ -28,6 +28,11 @@ jobs:
           def write(name, text):
               file(name).write_text(text)
           
+          def write_new(relative, text):
+              p = root / relative
+              p.parent.mkdir(parents=True, exist_ok=True)
+              p.write_text(text)
+          
           def replace(name, old, new, count=1):
               p = file(name)
               s = p.read_text()
@@ -151,7 +156,7 @@ jobs:
           
 
           
-          write("ModelDownloader.kt", """package com.personalai.mvp.models
+          write_new("app/src/main/java/com/personalai/mvp/models/ModelDownloader.kt", """package com.personalai.mvp.models
           
           import android.content.Context
           import com.personalai.mvp.importer.ImportResult
