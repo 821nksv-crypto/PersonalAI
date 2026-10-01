@@ -7,14 +7,134 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Unzip project
+      - name: Unzip and patch project sources
+        shell: bash
         run: |
-          mkdir src
+          set -euo pipefail
+          mkdir -p src
           unzip -q ./*.zip -d src
-          echo "Patching unavailable ExecuTorch Android version 1.5.0 -> 1.4.0"
-          grep -RIl --include='build.gradle' --include='build.gradle.kts' --include='libs.versions.toml' 'org.pytorch:executorch-android:1.5.0' src | xargs -r sed -i 's/org\.pytorch:executorch-android:1\.5\.0/org.pytorch:executorch-android:1.4.0/g'
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+          root = next(p.parent for p in Path("src").rglob("settings.gradle.kts"))
+
+          def file(name):
+              matches = list(root.rglob(name))
+              if len(matches) != 1:
+                  raise SystemExit(f"Expected exactly one {name}, found {len(matches)}")
+              return matches[0]
+
+          def replace_exact(name, old, new):
+              p = file(name)
+              s = p.read_text()
+              if old not in s:
+                  raise SystemExit(f"Patch anchor not found in {p}: {old[:100]!r}")
+              p.write_text(s.replace(old, new, 1))
+
+          for p in root.rglob("*"):
+              if p.is_file() and p.suffix in {".gradle", ".kts", ".toml"}:
+                  s = p.read_text()
+                  ns = s.replace("org.pytorch:executorch-android:1.5.0",
+                                 "org.pytorch:executorch-android:1.4.0")
+                  if ns != s:
+                      p.write_text(ns)
+
+          p = file("DocumentImportCoordinator.kt")
+          s = p.read_text()
+          s = re.sub(r'\n?data class ImportedDocument\([\s\S]*?\n\)\s*$', '\n', s)
+          s = s.replace(
+              "return ImportedDocument(id, displayName, target)",
+              "return ImportedDocument(id, displayName, target.absolutePath, target.length(), sha256(target))"
+          )
+          s = s.replace("import java.util.UUID", "import java.util.UUID\nimport java.security.MessageDigest")
+          if "private fun sha256(file: File)" not in s:
+              s += '\nprivate fun sha256(file: File): String = MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") { "%02x".format(it) }\n'
+          p.write_text(s)
+
+          replace_exact("RagOrchestrator.kt",
+                        "private val index: LocalVectorIndex",
+                        "private val index: PersistentVectorIndex")
+
+          replace_exact("ExecuTorchLocalEngine.kt",
+"""            val m = LlmModule(config)
+            val status = m.load()
+            if (status == 0) module = m else loadError = "ExecuTorch load error: $status"
+""",
+"""            val m = LlmModule(config)
+            m.load()
+            module = m
+""")
+
+          p = file("DocumentProgressBridge.kt")
+          p.write_text("""package com.personalai.mvp.documents
+
+          import androidx.lifecycle.LifecycleOwner
+          import com.personalai.mvp.indexing.ObservedWorkState
+          import com.personalai.mvp.indexing.WorkManagerIndexingObserver
+
+          class DocumentProgressBridge(private val observer: WorkManagerIndexingObserver) {
+              fun observe(
+                  owner: LifecycleOwner,
+                  documentId: String,
+                  onUpdate: (ObservedWorkState) -> Unit
+              ) {
+                  observer.observe(documentId).observe(owner) { infos ->
+                      observer.update(documentId, infos ?: emptyList())
+                      observer.state.value.lastOrNull()?.let(onUpdate)
+                  }
+              }
+
+              fun cancel(documentId: String) = observer.cancel(documentId)
+          }
+          """)
+
+          p = file("DocumentIndexWorker.kt")
+          s = p.read_text()
+          s, n = re.subn(
+              r'\n\s*setProgress\(Data\.Builder\(\)\n\s*\.putString\(KEY_STATUS, "RUNNING"\).*?\.build\(\)',
+              '',
+              s,
+              flags=re.S
+          )
+          if n != 1:
+              raise SystemExit(f"Expected one non-suspend setProgress callback in {p}, removed {n}")
+          p.write_text(s)
+
+          replace_exact("IndexingController.kt",
+                        "import androidx.lifecycle.LiveData",
+                        "import androidx.lifecycle.LiveData\nimport androidx.lifecycle.map")
+
+          p = file("OnnxMiniLmEmbedder.kt")
+          p.write_text(p.read_text().replace(
+              "longArrayOf(1, maxLength)",
+              "longArrayOf(1L, maxLength.toLong())"
+          ))
+
+          replace_exact("PdfTextExtractor.kt",
+"""DocumentChunk(
+                    documentName = displayName,
+                    pageNumber = page,
+                    chunkIndex = idx,
+                    text = piece
+                )""",
+"""DocumentChunk(
+                    documentName = displayName,
+                    chunkIndex = idx,
+                    text = piece
+                )""")
+
+          p = file("ModelInstallVerifier.kt")
+          s = p.read_text()
+          s, n = re.subn(r'\ndata class VerificationResult\(val ok: Boolean, val reason: String\)\n',
+                         '\n', s, count=1)
+          if n != 1:
+              raise SystemExit(f"Expected duplicate VerificationResult in {p}")
+          p.write_text(s)
+          print("Source compatibility patches applied.")
+          PY
           P=$(dirname "$(find src -name settings.gradle.kts | head -1)")
-          echo "PROJ=$P" >> $GITHUB_ENV
+          echo "PROJ=$P" >> "$GITHUB_ENV"
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -26,12 +146,12 @@ jobs:
           gradle-version: '8.11.1'
       - name: Unit tests
         continue-on-error: true
-        working-directory: ${{ env.PROJ }}
+        working-directory: \${{ env.PROJ }}
         run: gradle testDebugUnitTest --stacktrace
       - name: Build debug APK
-        working-directory: ${{ env.PROJ }}
+        working-directory: \${{ env.PROJ }}
         run: gradle assembleDebug --stacktrace
       - uses: actions/upload-artifact@v4
         with:
           name: personalai-debug-apk
-          path: ${{ env.PROJ }}/app/build/outputs/apk/debug/*.apk
+          path: \${{ env.PROJ }}/app/build/outputs/apk/debug/*.apk
