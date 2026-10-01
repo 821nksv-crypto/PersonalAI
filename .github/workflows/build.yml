@@ -124,15 +124,20 @@ jobs:
                   "private val index: LocalVectorIndex",
                   "private val index: PersistentVectorIndex")
           
-          replace("ExecuTorchLocalEngine.kt",
-          """            val m = LlmModule(config)
+          # The source ZIP can change between app package revisions. Do not make the build fail
+          # just because an older exact engine snippet is absent.
+          ep = file("ExecuTorchLocalEngine.kt")
+          es = ep.read_text()
+          old_engine_load = """            val m = LlmModule(config)
                       val status = m.load()
                       if (status == 0) module = m else loadError = "ExecuTorch load error: $status"
-          """,
-          """            val m = LlmModule(config)
+          """
+          new_engine_load = """            val m = LlmModule(config)
                       m.load()
                       module = m
-          """)
+          """
+          if old_engine_load in es:
+              ep.write_text(es.replace(old_engine_load, new_engine_load, 1))
           
           write("DocumentChunk.kt", """package com.personalai.mvp.rag
           
@@ -182,6 +187,54 @@ jobs:
           ep = file("ExecuTorchLocalEngine.kt")
           print(ep.read_text())
           print("EXECUTORCH SOURCE END")
+
+          # Make model loading lazy and keep it off the UI thread.
+          ep = file("ExecuTorchLocalEngine.kt")
+          es = ep.read_text()
+          init_pattern = r"(?s)\n    init\s*\{.*?\n    \}\n\n    override suspend fun generate"
+          lazy_block = """\n    private val moduleLock = Any()
+\n    private fun loadModule(): LlmModule {
+          module?.let { return it }
+          synchronized(moduleLock) {
+              module?.let { return it }
+              try {
+                  val config = org.pytorch.executorch.extension.llm.LlmModuleConfig.create()
+                      .modulePath(modelFile.absolutePath)
+                      .tokenizerPath(tokenizerFile.absolutePath)
+                      .temperature(0.7f)
+                      .modelType(org.pytorch.executorch.extension.llm.LlmModuleConfig.MODEL_TYPE_TEXT)
+                      .loadMode(org.pytorch.executorch.extension.llm.LlmModuleConfig.LOAD_MODE_MMAP)
+                      .build()
+                  val loaded = LlmModule(config)
+                  val status = loaded.load()
+                  if (status != 0) {
+                      throw IllegalStateException("ExecuTorch load error: $status")
+                  }
+                  module = loaded
+                  loadError = null
+                  return loaded
+              } catch (t: Throwable) {
+                  loadError = t.message ?: t.javaClass.simpleName
+                  throw t
+              }
+          }
+      }
+\n    override suspend fun generate"""
+          es2, n = re.subn(init_pattern, lazy_block, es, count=1)
+          if n != 1:
+              raise SystemExit("Could not replace ExecuTorch init block")
+          es2 = es2.replace("val m = module ?: return@withContext \"Local model could not be loaded: ${loadError ?: \"unknown error\"}\"", "val m = try { loadModule() } catch (t: Throwable) { return@withContext \"Local model could not be loaded: ${t.message ?: t.javaClass.simpleName}\" }", 1)
+          es2 = es2.replace("""        val m = module
+        if (m == null) {
+            onError(IllegalStateException(loadError ?: "Local model is not loaded."))
+            return
+        }
+        if (!generating.compareAndSet(false, true)) {""", """        if (!generating.compareAndSet(false, true)) {""", 1)
+          es2 = es2.replace("""            try {
+                val config = LlmGenerationConfig.create()""", """            try {
+                val m = loadModule()
+                val config = LlmGenerationConfig.create()""", 1)
+          ep.write_text(es2)
 
           replace("ExecuTorchLocalEngine.kt",
                   "m.generate(prompt, config, callback)",
