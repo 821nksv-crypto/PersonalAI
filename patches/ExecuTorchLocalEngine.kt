@@ -146,3 +146,4 @@ class ExecuTorchLocalEngine(
     override fun isReady(): Boolean = module != null
     override fun modelName(): String = modelFile.name
 }
+
