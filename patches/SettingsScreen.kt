@@ -7,8 +7,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.personalai.mvp.rag.EmbeddingStatus
 
@@ -56,7 +54,6 @@ fun SettingsScreen(
                     placeholder = { Text("Example: Answer in Hindi, be concise, and explain with examples.") },
                     minLines = 5,
                     maxLines = 8,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
