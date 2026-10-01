@@ -615,7 +615,7 @@ jobs:
                                   horizontalArrangement = Arrangement.SpaceBetween
                               ) {
                                   Text("Recent Chats", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
-                                  Text("See all", color = OfflineBlue, fontSize = 15.sp, modifier = Modifier.clickable { showChat = true })
+                                  Text("No history", color = OfflineMuted, fontSize = 15.sp)
                               }
                           }
           
@@ -709,43 +709,19 @@ jobs:
           
           @Composable
           private fun RecentChats(onOpen: () -> Unit) {
-              val chats = listOf(
-                  "General Clauses Act 5(3)" to "Today  •  10:25 PM",
-                  "UPSC Study Plan" to "Today  •  6:40 PM",
-                  "English Grammar Practice" to "Yesterday  •  9:15 PM"
-              )
               Card(
                   shape = RoundedCornerShape(22.dp),
                   colors = CardDefaults.cardColors(containerColor = OfflineCard2)
               ) {
-                  Column {
-                      chats.forEachIndexed { index, (title, meta) ->
-                          Row(
-                              Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = 14.dp, vertical = 13.dp),
-                              verticalAlignment = Alignment.CenterVertically
-                          ) {
-                              Box(
-                                  Modifier.size(45.dp).background(Color(0xFF17222E), CircleShape),
-                                  contentAlignment = Alignment.Center
-                              ) {
-                                  Text("◯", color = OfflineBlue, fontSize = 25.sp)
-                              }
-                              Spacer(Modifier.width(12.dp))
-                              Column(Modifier.weight(1f)) {
-                                  Text(title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                                  Spacer(Modifier.height(3.dp))
-                                  Text(meta, color = OfflineMuted, fontSize = 12.sp)
-                              }
-                              Text("⋮", color = Color.White, fontSize = 23.sp)
-                          }
-                          if (index != chats.lastIndex) {
-                              HorizontalDivider(color = Color(0xFF1B2631), thickness = 1.dp)
-                          }
-                      }
-                  }
+                  Text(
+                      "No recent chats yet. Start a chat and it will appear here.",
+                      color = OfflineMuted,
+                      fontSize = 14.sp,
+                      modifier = Modifier.fillMaxWidth().padding(18.dp)
+                  )
               }
           }
-          
+
           @Composable
           private fun ChatHeader(onBack: () -> Unit) {
               Surface(color = OfflineBg) {
