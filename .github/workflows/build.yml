@@ -826,6 +826,8 @@ private val OfflineThemeScheme = darkColorScheme(
           
           PY
           P=$(dirname "$(find src -name settings.gradle.kts | head -1)")
+          mkdir -p "$P/app/src/main/java/com/personalai/mvp/settings"
+          cp "$GITHUB_WORKSPACE/patches/SettingsScreen.kt" "$P/app/src/main/java/com/personalai/mvp/settings/SettingsScreen.kt"
           MANIFEST="$P/app/src/main/AndroidManifest.xml"
           python3 - "$MANIFEST" <<'PY'
           import sys
