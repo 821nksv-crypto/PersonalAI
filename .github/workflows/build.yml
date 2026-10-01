@@ -256,6 +256,7 @@ class ModelDownloader(
           import androidx.compose.foundation.layout.*
           import androidx.compose.material3.*
           import androidx.compose.runtime.Composable
+          import androidx.compose.runtime.LaunchedEffect
           import androidx.compose.ui.Modifier
           import androidx.compose.ui.unit.dp
           
@@ -269,6 +270,11 @@ class ModelDownloader(
               downloadProgress: Float,
               downloadStatus: String
           ) {
+              LaunchedEffect(installedModels, downloading) {
+                  if (installedModels.isEmpty() && !downloading) {
+                      onDownload()
+                  }
+              }
               Column(
                   Modifier.fillMaxSize().padding(16.dp),
                   verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -276,7 +282,7 @@ class ModelDownloader(
                   Text("Local Models", style = MaterialTheme.typography.headlineSmall)
                   Text(
                       "Recommended: Qwen3 1.7B, quantized for ExecuTorch/XNNPACK. " +
-                          "It downloads once and then runs locally.",
+                          "The model is bundled in this APK and is prepared automatically on first launch.",
                       style = MaterialTheme.typography.bodyMedium
                   )
                   Button(
@@ -284,7 +290,7 @@ class ModelDownloader(
                       enabled = !downloading,
                       modifier = Modifier.fillMaxWidth()
                   ) {
-                      Text(if (downloading) "Downloading model…" else "Download Qwen3 1.7B • 2K (~1.28 GB)")
+                      Text(if (downloading) "Preparing built-in model…" else "Qwen3 1.7B • Built-in")
                   }
                   if (downloading) {
                       LinearProgressIndicator(
