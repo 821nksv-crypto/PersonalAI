@@ -200,9 +200,9 @@ jobs:
               dir = dir?.parentFile
           }
           return prompt
-      }
+          }
 
-      fun stopStreaming() {""")
+          fun stopStreaming() {""")
 
           write_new("app/src/main/java/com/personalai/mvp/models/ModelDownloader.kt", """package com.personalai.mvp.models
 
