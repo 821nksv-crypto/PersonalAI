@@ -7,6 +7,8 @@ import org.pytorch.executorch.extension.llm.LlmGenerationConfig
 import org.pytorch.executorch.extension.llm.LlmModule
 import org.pytorch.executorch.extension.llm.LlmModuleConfig
 import java.io.File
+import android.os.Handler
+import android.os.Looper
 import java.util.concurrent.atomic.AtomicBoolean
 
 class ExecuTorchLocalEngine(
@@ -18,6 +20,7 @@ class ExecuTorchLocalEngine(
     private var loadError: String? = null
     private val generating = AtomicBoolean(false)
     private val moduleLock = Any()
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private fun loadModule(): LlmModule {
         module?.let { return it }
@@ -32,7 +35,8 @@ class ExecuTorchLocalEngine(
                     .loadMode(LlmModuleConfig.LOAD_MODE_MMAP)
                     .build()
                 val loaded = LlmModule(config)
-                loaded.load()
+                val status = loaded.load()
+                if (status != 0) throw IllegalStateException("ExecuTorch model load failed: status=$status")
                 module = loaded
                 loadError = null
                 return loaded
@@ -89,7 +93,7 @@ class ExecuTorchLocalEngine(
         onError: (Throwable) -> Unit
     ) {
         if (!generating.compareAndSet(false, true)) {
-            onError(IllegalStateException("A generation is already running."))
+            mainHandler.post { runCatching { onError(IllegalStateException("A generation is already running.")) } }
             return
         }
         Thread {
@@ -105,16 +109,16 @@ class ExecuTorchLocalEngine(
                 val callback = object : LlmCallback {
                     override fun onResult(token: String) {
                         output.append(token)
-                        onToken(token)
+                        mainHandler.post { runCatching { onToken(token) } }
                     }
-                    override fun onStats(statsJson: String) { onComplete(output.toString()) }
+                    override fun onStats(statsJson: String) { val text = output.toString(); mainHandler.post { runCatching { onComplete(text) } } }
                     override fun onError(errorCode: Int, message: String) {
-                        onError(IllegalStateException("ExecuTorch error $errorCode: $message"))
+                        mainHandler.post { runCatching { onError(IllegalStateException("ExecuTorch error $errorCode: $message")) } }
                     }
                 }
                 m.generate(applySystemInstructions(prompt), config, callback)
             } catch (t: Throwable) {
-                onError(t)
+                mainHandler.post { runCatching { onError(t) } }
             } finally {
                 generating.set(false)
             }
@@ -124,7 +128,7 @@ class ExecuTorchLocalEngine(
         }
     }
 
-    fun stopStreaming() { module?.stop() }
+    fun stopStreaming() { runCatching { module?.stop() } }
 
     private fun applySystemInstructions(prompt: String): String {
         if (prompt.contains("<|im_start|>system")) return prompt
