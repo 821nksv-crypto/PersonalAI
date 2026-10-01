@@ -177,10 +177,16 @@ jobs:
                   private const val MODEL_URL =
                       "https://huggingface.co/experimentalmachines/Qwen3-0.6B-ExecuTorch/resolve/main/xnnpack/Qwen3-0.6B-8da4w-2k.pte"
                   private const val TOKENIZER_URL =
-                      "https://huggingface.co/experimentalmachines/Qwen3-0.6B-ExecuTorch/resolve/c1899de289a0/tokenizer.json"
+                      "https://huggingface.co/experimentalmachines/Qwen3-0.6B-ExecuTorch/resolve/main/tokenizer.json"
                   private const val MODEL_FILE = "Qwen3-0.6B-8da4w-2k.pte"
                   private const val TOKENIZER_FILE = "tokenizer.json"
                   private const val MODEL_ID = "qwen3-0.6b-xnnpack-8da4w-2k"
+                  private const val LARGE_MODEL_URL =
+                      "https://huggingface.co/experimentalmachines/Qwen3-1.7B-ExecuTorch/resolve/main/xnnpack/Qwen3-1.7B-8da4w-2k.pte"
+                  private const val LARGE_TOKENIZER_URL =
+                      "https://huggingface.co/experimentalmachines/Qwen3-1.7B-ExecuTorch/resolve/main/tokenizer.json"
+                  private const val LARGE_MODEL_FILE = "Qwen3-1.7B-8da4w-2k.pte"
+                  private const val LARGE_MODEL_ID = "qwen3-1.7b-xnnpack-8da4w-2k"
                   private const val MODEL_VERSION = "1.0"
               }
           
