@@ -228,9 +228,9 @@ jobs:
                       .put("architecture", "arm64-v8a")
                       .put("fileName", MODEL_FILE)
                       .put("sizeBytes", model.length())
-                      .put("sha256", ModelVerifier.sha256(model))
+                      .put("sha256", sha256Streaming(model))
                       .put("tokenizerFileName", TOKENIZER_FILE)
-                      .put("tokenizerSha256", ModelVerifier.sha256(tokenizer))
+                      .put("tokenizerSha256", sha256Streaming(tokenizer))
           
                   val manifestFile = File(modelsDir, "qwen3-1.7b-manifest.json")
                   manifestFile.writeText(manifest.toString())
@@ -263,11 +263,20 @@ jobs:
                           }
                           output.fd.sync()
                       }
+              private fun sha256Streaming(file: File): String {
+                  val digest = MessageDigest.getInstance("SHA-256")
+                  FileInputStream(file).use { input ->
+                      val buffer = ByteArray(1024 * 1024)
+                      while (true) {
+                          val n = input.read(buffer)
+                          if (n < 0) break
+                          digest.update(buffer, 0, n)
+                      }
                   }
+                  return digest.digest().joinToString("") { "%02x".format(it) }
               }
           }
           """)
-          
           replace("ModelImportScreen.kt",
                   "package com.personalai.mvp.importer",
                   """package com.personalai.mvp.importer""",
