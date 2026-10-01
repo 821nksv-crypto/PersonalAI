@@ -175,7 +175,7 @@ jobs:
           ) {
               companion object {
                   private const val MODEL_URL =
-                      "https://huggingface.co/experimentalmachines/Qwen3-0.6B-ExecuTorch/resolve/c1899de289a0/xnnpack/Qwen3-0.6B-8da4w-2k.pte"
+                      "https://huggingface.co/experimentalmachines/Qwen3-0.6B-ExecuTorch/resolve/main/xnnpack/Qwen3-0.6B-8da4w-2k.pte"
                   private const val TOKENIZER_URL =
                       "https://huggingface.co/experimentalmachines/Qwen3-0.6B-ExecuTorch/resolve/c1899de289a0/tokenizer.json"
                   private const val MODEL_FILE = "Qwen3-0.6B-8da4w-2k.pte"
