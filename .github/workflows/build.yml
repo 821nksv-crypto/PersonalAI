@@ -33,6 +33,9 @@ jobs:
               p.parent.mkdir(parents=True, exist_ok=True)
               p.write_text(text)
           
+          logo_xml = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<vector xmlns:android=\"http://schemas.android.com/apk/res/android\" android:width=\"108dp\" android:height=\"108dp\" android:viewportWidth=\"108\" android:viewportHeight=\"108\">\n<path android:fillColor=\"#05080D\" android:pathData=\"M0,18C0,8.1 8.1,0 18,0h72c9.9,0 18,8.1 18,18v72c0,9.9 -8.1,18 -18,18H18C8.1,108 0,99.9 0,90z\"/>\n<path android:fillColor=\"#00D8FF\" android:pathData=\"M54,25C43,16 28,22 28,36c0,5 2,9 5,12 -8,5 -10,17 -4,24 4,5 10,7 16,5 3,7 10,10 17,8V29c-3,-1 -5,-2 -8,-4z\"/>\n<path android:fillColor=\"#7B4DFF\" android:pathData=\"M54,25C65,16 80,22 80,36c0,5 -2,9 -5,12 8,5 10,17 4,24 -4,5 -10,7 -16,5 -3,7 -10,10 -17,8V29c3,-1 5,-2 8,-4z\"/>\n<path android:fillColor=\"#07101C\" android:pathData=\"M52,29h4v50h-4z\"/>\n<path android:fillColor=\"#FFFFFF\" android:pathData=\"M40,35c-4,0 -7,3 -7,7s3,7 7,7 7,-3 7,-7 -3,-7 -7,-7zM68,35c-4,0 -7,3 -7,7s3,7 7,7 7,-3 7,-7 -3,-7 -7,-7z\"/>\n<path android:fillColor=\"#28DFFF\" android:pathData=\"M39,41h12v3H39zM57,41h12v3H57zM40,56h10v3H40zM58,56h10v3H58zM42,69h9v3H42zM57,69h9v3H57z\"/>\n<path android:fillColor=\"#00000000\" android:strokeColor=\"#35B9FF\" android:strokeWidth=\"1.2\" android:pathData=\"M17,54a37,37 0,1 0,74 0a37,37 0,1 0,-74 0\"/>\n<path android:fillColor=\"#00000000\" android:strokeColor=\"#A34FFF\" android:strokeWidth=\"1.2\" android:pathData=\"M28,28a37,37 0,0 1,52 52\"/>\n</vector>"
+          write_new("app/src/main/res/drawable/personalai_logo.xml", logo_xml)
+
           def replace(name, old, new, count=1):
               p = file(name)
               s = p.read_text()
@@ -255,6 +258,9 @@ jobs:
           
           import androidx.compose.foundation.layout.*
           import androidx.compose.material3.*
+          import androidx.compose.ui.res.painterResource
+          import androidx.compose.foundation.Image
+          import com.personalai.mvp.R
           import androidx.compose.runtime.Composable
           import androidx.compose.runtime.LaunchedEffect
           import androidx.compose.ui.Modifier
@@ -553,24 +559,11 @@ jobs:
                   modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp),
                   horizontalAlignment = Alignment.CenterHorizontally
               ) {
-                  Box(
-                      modifier = Modifier
-                          .size(118.dp)
-                          .border(
-                              1.dp,
-                              Brush.sweepGradient(listOf(OfflineBlue, Color(0xFF2C5DFF), OfflineBlue2, OfflineBlue)),
-                              CircleShape
-                          )
-                          .padding(10.dp)
-                          .border(
-                              1.dp,
-                              Brush.horizontalGradient(listOf(Color(0xFF3B8DFF), Color(0xFF604BFF))),
-                              CircleShape
-                          ),
-                      contentAlignment = Alignment.Center
-                  ) {
-                      Text("AI", color = OfflineBlue, fontSize = 34.sp, fontWeight = FontWeight.Bold)
-                  }
+                  Image(
+                      painter = painterResource(R.drawable.personalai_logo),
+                      contentDescription = "PersonalAI",
+                      modifier = Modifier.size(132.dp)
+                  )
                   Spacer(Modifier.height(10.dp))
                   Row(verticalAlignment = Alignment.CenterVertically) {
                       Text("Offline ", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Bold)
@@ -731,6 +724,12 @@ jobs:
           
           """)
           
+          manifest = file("AndroidManifest.xml")
+          ms = manifest.read_text()
+          import re
+          ms = re.sub(r'android:icon="@[^"]+"', 'android:icon="@drawable/personalai_logo"', ms, count=1)
+          manifest.write_text(ms)
+
           replace("PersonalAiHostActivity.kt",
                   "import com.personalai.mvp.models.SelectedModelPair",
                   """import com.personalai.mvp.models.SelectedModelPair
