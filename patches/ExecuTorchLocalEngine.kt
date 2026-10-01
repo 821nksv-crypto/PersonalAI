@@ -32,8 +32,7 @@ class ExecuTorchLocalEngine(
                     .loadMode(LlmModuleConfig.LOAD_MODE_MMAP)
                     .build()
                 val loaded = LlmModule(config)
-                val status = loaded.load()
-                if (status != 0) throw IllegalStateException("ExecuTorch load error: $status")
+                loaded.load()
                 module = loaded
                 loadError = null
                 return loaded
@@ -146,4 +145,3 @@ class ExecuTorchLocalEngine(
     override fun isReady(): Boolean = module != null
     override fun modelName(): String = modelFile.name
 }
-
