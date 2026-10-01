@@ -873,7 +873,7 @@ jobs:
                   print(f"===== FILE {fp} =====")
                   print(fp.read_text(errors="replace"))
           print("===== END DOCUMENT SUMMARY DIAGNOSTIC =====")
-                    print("Source compatibility patches applied.")
+          print("Source compatibility patches applied.")
           
           PY
           P=$(dirname "$(find src -name settings.gradle.kts | head -1)")
