@@ -198,6 +198,8 @@ jobs:
                   val tokenizerPart = File(modelsDir, "$TOKENIZER_FILE.part")
           
                   try {
+                      model.delete()
+                      tokenizer.delete()
                       download(MODEL_URL, modelPart, onProgress)
                       require(modelPart.renameTo(model)) { "Could not finalize downloaded model." }
                       download(TOKENIZER_URL, tokenizerPart) { done, total -> onProgress(done, total) }
@@ -472,7 +474,8 @@ jobs:
                   "import com.personalai.mvp.models.SelectedModelPair",
                   """import com.personalai.mvp.models.SelectedModelPair
           import com.personalai.mvp.models.ModelDownloader
-          import androidx.lifecycle.lifecycleScope""")
+          import androidx.lifecycle.lifecycleScope
+          import kotlinx.coroutines.launch""")
           replace("PersonalAiHostActivity.kt",
                   "private val modelImportService by lazy { ModelImportService(this) }",
                   """private val modelImportService by lazy { ModelImportService(this) }
