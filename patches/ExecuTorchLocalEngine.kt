@@ -35,8 +35,7 @@ class ExecuTorchLocalEngine(
                     .loadMode(LlmModuleConfig.LOAD_MODE_MMAP)
                     .build()
                 val loaded = LlmModule(config)
-                val status = loaded.load()
-                if (status != 0) throw IllegalStateException("ExecuTorch model load failed: status=$status")
+                loaded.load()
                 module = loaded
                 loadError = null
                 return loaded
@@ -72,7 +71,7 @@ class ExecuTorchLocalEngine(
             generating.set(true)
             val config = LlmGenerationConfig.create()
                 .seqLen(2048)
-                .maxNewTokens(512)
+                .maxNewTokens(256)
                 .temperature(0.7f)
                 .echo(false)
                 .build()
