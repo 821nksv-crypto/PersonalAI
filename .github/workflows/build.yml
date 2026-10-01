@@ -173,7 +173,7 @@ jobs:
               private val importService: ModelImportService
           ) {
               companion object {
-                  private const val MODEL_FILE = "Qwen3-1.7B-8da4w-2k.pte"
+                  private const val MODEL_FILE = "Qwen3-1.7B-8da4w-gptq-2k.pte"
                   private const val TOKENIZER_FILE = "tokenizer.json"
                   private const val MODEL_ID = "qwen3-1.7b-xnnpack-8da4w-2k"
                   private const val MODEL_VERSION = "1.0"
@@ -327,20 +327,42 @@ jobs:
           }
           """)
           
-          write("PersonalAiAppShell.kt", """package com.personalai.mvp.shell
+          write("PersonalAiAppShell.kt", """
+          package com.personalai.mvp.shell
           
-          import androidx.compose.runtime.*
+          import androidx.compose.foundation.background
+          import androidx.compose.foundation.border
+          import androidx.compose.foundation.clickable
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.foundation.lazy.LazyColumn
+          import androidx.compose.foundation.lazy.items
+          import androidx.compose.foundation.shape.CircleShape
+          import androidx.compose.foundation.shape.RoundedCornerShape
           import androidx.compose.material3.*
+          import androidx.compose.runtime.*
+          import androidx.compose.ui.Alignment
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.graphics.Brush
+          import androidx.compose.ui.graphics.Color
+          import androidx.compose.ui.text.font.FontWeight
+          import androidx.compose.ui.text.style.TextAlign
+          import androidx.compose.ui.unit.dp
+          import androidx.compose.ui.unit.sp
           import com.personalai.mvp.appstate.AppScreen
           import com.personalai.mvp.appstate.AppStateRepository
-          import com.personalai.mvp.onboarding.PrivacySetupScreen
-          import com.personalai.mvp.settings.SettingsScreen
-          import com.personalai.mvp.rag.EmbeddingStatus
           import com.personalai.mvp.documents.DocumentLibraryScreen
           import com.personalai.mvp.documents.DocumentUiItem
           import com.personalai.mvp.importer.ModelImportScreen
-          import androidx.compose.foundation.layout.*
-          import androidx.compose.ui.Modifier
+          import com.personalai.mvp.onboarding.PrivacySetupScreen
+          import com.personalai.mvp.rag.EmbeddingStatus
+          import com.personalai.mvp.settings.SettingsScreen
+          
+          private val OfflineBg = Color(0xFF05080D)
+          private val OfflineCard = Color(0xFF101820)
+          private val OfflineCard2 = Color(0xFF0C141C)
+          private val OfflineBlue = Color(0xFF4D8DFF)
+          private val OfflineBlue2 = Color(0xFF4C39F5)
+          private val OfflineMuted = Color(0xFF9BA7B8)
           
           @Composable
           fun PersonalAiAppShell(
@@ -376,8 +398,11 @@ jobs:
               }
           
               when (state.currentScreen) {
-                  AppScreen.CHAT -> MainScaffold(AppScreen.CHAT, appState::navigate) { chatContent() }
-                  AppScreen.DOCUMENTS -> MainScaffold(AppScreen.DOCUMENTS, appState::navigate) {
+                  AppScreen.CHAT -> OfflineHomeAndChat(
+                      onNavigate = appState::navigate,
+                      chatContent = chatContent
+                  )
+                  AppScreen.DOCUMENTS -> MainScaffold(AppScreen.DOCUMENTS, appState::navigate, "Documents") {
                       DocumentLibraryScreen(
                           documents = documents,
                           onImportPdf = onImportPdf,
@@ -388,7 +413,7 @@ jobs:
                           onReindexAll = onReindexAll
                       )
                   }
-                  AppScreen.MODELS -> MainScaffold(AppScreen.MODELS, appState::navigate) {
+                  AppScreen.MODELS -> MainScaffold(AppScreen.MODELS, appState::navigate, "Local AI Model") {
                       ModelImportScreen(
                           installedModels = installedModels,
                           onImport = onImportModel,
@@ -399,7 +424,7 @@ jobs:
                           downloadStatus = downloadStatus
                       )
                   }
-                  AppScreen.SETTINGS -> MainScaffold(AppScreen.SETTINGS, appState::navigate) {
+                  AppScreen.SETTINGS -> MainScaffold(AppScreen.SETTINGS, appState::navigate, "Settings") {
                       SettingsScreen(
                           internetEnabled = state.internetEnabled,
                           memoryEnabled = memoryEnabled,
@@ -416,14 +441,274 @@ jobs:
           }
           
           @Composable
+          private fun OfflineHomeAndChat(
+              onNavigate: (AppScreen) -> Unit,
+              chatContent: @Composable () -> Unit
+          ) {
+              var showChat by rememberSaveable { mutableStateOf(false) }
+          
+              if (showChat) {
+                  Surface(modifier = Modifier.fillMaxSize(), color = OfflineBg) {
+                      Column(Modifier.fillMaxSize()) {
+                          ChatHeader(onBack = { showChat = false })
+                          Box(Modifier.weight(1f).fillMaxWidth()) {
+                              chatContent()
+                          }
+                      }
+                  }
+              } else {
+                  Surface(modifier = Modifier.fillMaxSize(), color = OfflineBg) {
+                      LazyColumn(
+                          modifier = Modifier.fillMaxSize(),
+                          contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 24.dp),
+                          verticalArrangement = Arrangement.spacedBy(14.dp)
+                      ) {
+                          item {
+                              Row(
+                                  modifier = Modifier.fillMaxWidth(),
+                                  horizontalArrangement = Arrangement.SpaceBetween,
+                                  verticalAlignment = Alignment.CenterVertically
+                              ) {
+                                  Text(
+                                      "☰",
+                                      color = Color.White,
+                                      fontSize = 31.sp,
+                                      modifier = Modifier.clickable { onNavigate(AppScreen.DOCUMENTS) }
+                                  )
+                                  Text(
+                                      "⚙",
+                                      color = Color.White,
+                                      fontSize = 29.sp,
+                                      modifier = Modifier.clickable { onNavigate(AppScreen.SETTINGS) }
+                                  )
+                              }
+                          }
+          
+                          item { HeroBrand() }
+          
+                          item {
+                              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                  FeatureCard(
+                                      modifier = Modifier.weight(1f),
+                                      icon = "○",
+                                      iconBrush = Brush.horizontalGradient(listOf(Color(0xFF6888FF), Color(0xFF6D4CFF))),
+                                      title = "Start Chat",
+                                      subtitle = "Ask anything",
+                                      onClick = { showChat = true }
+                                  )
+                                  FeatureCard(
+                                      modifier = Modifier.weight(1f),
+                                      icon = "▤",
+                                      iconBrush = Brush.horizontalGradient(listOf(Color(0xFF45A9FF), Color(0xFF5B7BFF))),
+                                      title = "Summarize",
+                                      subtitle = "Text, PDF, Notes",
+                                      onClick = { onNavigate(AppScreen.DOCUMENTS) }
+                                  )
+                              }
+                          }
+          
+                          item {
+                              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                  FeatureCard(
+                                      modifier = Modifier.weight(1f),
+                                      icon = "▧",
+                                      iconBrush = Brush.horizontalGradient(listOf(Color(0xFF43E59A), Color(0xFF36B8B0))),
+                                      title = "Analyze Image",
+                                      subtitle = "Understand photos",
+                                      onClick = { showChat = true }
+                                  )
+                                  FeatureCard(
+                                      modifier = Modifier.weight(1f),
+                                      icon = "◇",
+                                      iconBrush = Brush.horizontalGradient(listOf(Color(0xFFFFE06A), Color(0xFFFFB52E))),
+                                      title = "Ideas",
+                                      subtitle = "Brainstorm & Plan",
+                                      onClick = { showChat = true }
+                                  )
+                              }
+                          }
+          
+                          item {
+                              Row(
+                                  Modifier.fillMaxWidth(),
+                                  verticalAlignment = Alignment.CenterVertically,
+                                  horizontalArrangement = Arrangement.SpaceBetween
+                              ) {
+                                  Text("Recent Chats", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
+                                  Text("See all", color = OfflineBlue, fontSize = 15.sp, modifier = Modifier.clickable { showChat = true })
+                              }
+                          }
+          
+                          item {
+                              RecentChats(onOpen = { showChat = true })
+                          }
+                      }
+                  }
+              }
+          }
+          
+          @Composable
+          private fun HeroBrand() {
+              Column(
+                  modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp),
+                  horizontalAlignment = Alignment.CenterHorizontally
+              ) {
+                  Box(
+                      modifier = Modifier
+                          .size(118.dp)
+                          .border(
+                              1.dp,
+                              Brush.sweepGradient(listOf(OfflineBlue, Color(0xFF2C5DFF), OfflineBlue2, OfflineBlue)),
+                              CircleShape
+                          )
+                          .padding(10.dp)
+                          .border(
+                              1.dp,
+                              Brush.horizontalGradient(listOf(Color(0xFF3B8DFF), Color(0xFF604BFF))),
+                              CircleShape
+                          ),
+                      contentAlignment = Alignment.Center
+                  ) {
+                      Text("AI", color = OfflineBlue, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+                  }
+                  Spacer(Modifier.height(10.dp))
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                      Text("Offline ", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Bold)
+                      Text("AI", color = OfflineBlue, fontSize = 38.sp, fontWeight = FontWeight.Bold)
+                  }
+                  Spacer(Modifier.height(2.dp))
+                  Text(
+                      "On-device  •  Private  •  No Internet",
+                      color = OfflineMuted,
+                      fontSize = 16.sp
+                  )
+              }
+          }
+          
+          @Composable
+          private fun FeatureCard(
+              modifier: Modifier,
+              icon: String,
+              iconBrush: Brush,
+              title: String,
+              subtitle: String,
+              onClick: () -> Unit
+          ) {
+              Card(
+                  modifier = modifier.height(154.dp).clickable(onClick = onClick),
+                  shape = RoundedCornerShape(22.dp),
+                  colors = CardDefaults.cardColors(containerColor = OfflineCard)
+              ) {
+                  Column(
+                      Modifier.fillMaxSize().padding(12.dp),
+                      horizontalAlignment = Alignment.CenterHorizontally,
+                      verticalArrangement = Arrangement.Center
+                  ) {
+                      Text(
+                          icon,
+                          color = iconBrush.colors.first(),
+                          fontSize = 43.sp,
+                          fontWeight = FontWeight.Light
+                      )
+                      Spacer(Modifier.height(5.dp))
+                      Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                      Spacer(Modifier.height(3.dp))
+                      Text(subtitle, color = OfflineMuted, fontSize = 14.sp, textAlign = TextAlign.Center)
+                  }
+              }
+          }
+          
+          @Composable
+          private fun RecentChats(onOpen: () -> Unit) {
+              val chats = listOf(
+                  "General Clauses Act 5(3)" to "Today  •  10:25 PM",
+                  "UPSC Study Plan" to "Today  •  6:40 PM",
+                  "English Grammar Practice" to "Yesterday  •  9:15 PM"
+              )
+              Card(
+                  shape = RoundedCornerShape(22.dp),
+                  colors = CardDefaults.cardColors(containerColor = OfflineCard2)
+              ) {
+                  Column {
+                      chats.forEachIndexed { index, (title, meta) ->
+                          Row(
+                              Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = 14.dp, vertical = 13.dp),
+                              verticalAlignment = Alignment.CenterVertically
+                          ) {
+                              Box(
+                                  Modifier.size(45.dp).background(Color(0xFF17222E), CircleShape),
+                                  contentAlignment = Alignment.Center
+                              ) {
+                                  Text("◯", color = OfflineBlue, fontSize = 25.sp)
+                              }
+                              Spacer(Modifier.width(12.dp))
+                              Column(Modifier.weight(1f)) {
+                                  Text(title, color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                                  Spacer(Modifier.height(3.dp))
+                                  Text(meta, color = OfflineMuted, fontSize = 12.sp)
+                              }
+                              Text("⋮", color = Color.White, fontSize = 23.sp)
+                          }
+                          if (index != chats.lastIndex) {
+                              HorizontalDivider(color = Color(0xFF1B2631), thickness = 1.dp)
+                          }
+                      }
+                  }
+              }
+          }
+          
+          @Composable
+          private fun ChatHeader(onBack: () -> Unit) {
+              Surface(color = OfflineBg) {
+                  Row(
+                      Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                      verticalAlignment = Alignment.CenterVertically
+                  ) {
+                      Text("←", color = Color.White, fontSize = 34.sp, modifier = Modifier.clickable(onClick = onBack))
+                      Spacer(Modifier.width(12.dp))
+                      Column(Modifier.weight(1f)) {
+                          Text("Offline AI", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                          Row(verticalAlignment = Alignment.CenterVertically) {
+                              Text("●", color = Color(0xFF36D987), fontSize = 13.sp)
+                              Spacer(Modifier.width(6.dp))
+                              Text("On-device  •  Ready", color = OfflineMuted, fontSize = 14.sp)
+                          }
+                      }
+                      Text("⌫", color = Color.White, fontSize = 24.sp)
+                      Spacer(Modifier.width(18.dp))
+                      Text("⋮", color = Color.White, fontSize = 28.sp)
+                  }
+              }
+          }
+          
+          @Composable
           private fun MainScaffold(
               selected: AppScreen,
               onSelect: (AppScreen) -> Unit,
+              title: String,
               content: @Composable () -> Unit
           ) {
               Scaffold(
+                  containerColor = OfflineBg,
+                  topBar = {
+                      Surface(color = OfflineBg) {
+                          Row(
+                              Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                              verticalAlignment = Alignment.CenterVertically
+                          ) {
+                              Text(
+                                  "←",
+                                  color = Color.White,
+                                  fontSize = 30.sp,
+                                  modifier = Modifier.clickable { onSelect(AppScreen.CHAT) }
+                              )
+                              Spacer(Modifier.width(14.dp))
+                              Text(title, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                          }
+                      }
+                  },
                   bottomBar = {
-                      NavigationBar {
+                      NavigationBar(containerColor = Color(0xFF0B1117)) {
                           listOf(
                               AppScreen.CHAT to "Chat",
                               AppScreen.DOCUMENTS to "Documents",
@@ -443,6 +728,7 @@ jobs:
                   Box(Modifier.fillMaxSize().padding(padding)) { content() }
               }
           }
+          
           """)
           
           replace("PersonalAiHostActivity.kt",
@@ -519,11 +805,11 @@ jobs:
           PY
           mkdir -p "$P/app/src/main/assets/models"
           echo "Downloading bundled Qwen3 model for APK packaging..."
-          curl -L --fail --retry 5 --retry-delay 5 -o "$P/app/src/main/assets/models/Qwen3-1.7B-8da4w-2k.pte" "https://huggingface.co/experimentalmachines/Qwen3-1.7B-ExecuTorch/resolve/main/xnnpack/Qwen3-1.7B-8da4w-2k.pte?download=true"
-          curl -L --fail --retry 5 --retry-delay 5 -o "$P/app/src/main/assets/models/tokenizer.json" "https://huggingface.co/experimentalmachines/Qwen3-1.7B-ExecuTorch/resolve/main/tokenizer.json?download=true"
-          test -s "$P/app/src/main/assets/models/Qwen3-1.7B-8da4w-2k.pte"
+          curl -L --fail --retry 5 --retry-delay 5 -o "$P/app/src/main/assets/models/Qwen3-1.7B-8da4w-gptq-2k.pte" "https://huggingface.co/experimentalmachines/Qwen3-1.7B-ExecuTorch/resolve/main/xnnpack/Qwen3-1.7B-8da4w-gptq-2k.pte"
+          curl -L --fail --retry 5 --retry-delay 5 -o "$P/app/src/main/assets/models/tokenizer.json" "https://huggingface.co/experimentalmachines/Qwen3-1.7B-ExecuTorch/resolve/main/tokenizer.json"
+          test -s "$P/app/src/main/assets/models/Qwen3-1.7B-8da4w-gptq-2k.pte"
           test -s "$P/app/src/main/assets/models/tokenizer.json"
-          echo "Bundled model size: $(du -h "$P/app/src/main/assets/models/Qwen3-1.7B-8da4w-2k.pte" | cut -f1)"
+          echo "Bundled model size: $(du -h "$P/app/src/main/assets/models/Qwen3-1.7B-8da4w-gptq-2k.pte" | cut -f1)"
           echo "Bundled tokenizer size: $(du -h "$P/app/src/main/assets/models/tokenizer.json" | cut -f1)"
           echo "PROJ=$P" >> "$GITHUB_ENV"
 
