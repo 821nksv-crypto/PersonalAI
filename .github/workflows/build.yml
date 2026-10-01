@@ -402,6 +402,25 @@ jobs:
           private val OfflineBlue2 = Color(0xFF4C39F5)
           private val OfflineMuted = Color(0xFF9BA7B8)
           
+          private val OfflineThemeScheme = darkColorScheme(
+              primary = Color(0xFF7C5CFF),
+              onPrimary = Color.White,
+              secondary = Color(0xFF4D8DFF),
+              onSecondary = Color.White,
+              background = OfflineBg,
+              onBackground = Color(0xFFF5F7FA),
+              surface = OfflineCard,
+              onSurface = Color(0xFFF5F7FA),
+              surfaceVariant = Color(0xFF1A2530),
+              onSurfaceVariant = Color(0xFFADB8C7),
+              outline = Color(0xFF566170)
+          )
+          
+          @Composable
+          private fun OfflineTheme(content: @Composable () -> Unit) {
+              MaterialTheme(colorScheme = OfflineThemeScheme, content = content)
+          }
+          
           @Composable
           fun PersonalAiAppShell(
               appState: AppStateRepository,
@@ -430,7 +449,7 @@ jobs:
           ) {
               val state by appState.state.collectAsState()
           
-    when (state.currentScreen) {
+              when (state.currentScreen) {
                   AppScreen.CHAT -> OfflineHomeAndChat(
                       onNavigate = appState::navigate,
                       chatContent = chatContent
