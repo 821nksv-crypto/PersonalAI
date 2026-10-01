@@ -375,7 +375,6 @@ fun ModelImportScreen(
           import com.personalai.mvp.documents.DocumentLibraryScreen
           import com.personalai.mvp.documents.DocumentUiItem
           import com.personalai.mvp.importer.ModelImportScreen
-          import com.personalai.mvp.onboarding.PrivacySetupScreen
           import com.personalai.mvp.rag.EmbeddingStatus
           import com.personalai.mvp.settings.SettingsScreen
           
@@ -487,7 +486,13 @@ private val OfflineThemeScheme = darkColorScheme(
                       Column(Modifier.fillMaxSize()) {
                           ChatHeader(modelReady = modelReady, onBack = { showChat = false })
                           Box(Modifier.weight(1f).fillMaxWidth()) {
-                              chatContent()
+                              OfflineTheme {
+                                  if (modelReady) {
+                                      chatContent()
+                                  } else {
+                                      ModelRequiredPanel(onOpenModels = { onNavigate(AppScreen.MODELS) })
+                                  }
+                              }
                           }
                       }
                   }
@@ -536,7 +541,7 @@ private val OfflineThemeScheme = darkColorScheme(
                                       icon = "▤",
                                       iconBrush = Brush.horizontalGradient(listOf(Color(0xFF45A9FF), Color(0xFF5B7BFF))),
                                       title = "Summarize",
-                                      subtitle = "Open Documents",
+                                      subtitle = "Select a PDF",
                                       onClick = { onNavigate(AppScreen.DOCUMENTS) }
                                   )
                               }
@@ -582,6 +587,28 @@ private val OfflineThemeScheme = darkColorScheme(
               }
           }
           
+          @Composable
+          private fun ModelRequiredPanel(onOpenModels: () -> Unit) {
+              Card(
+                  modifier = Modifier.fillMaxWidth().padding(24.dp),
+                  colors = CardDefaults.cardColors(containerColor = OfflineCard)
+              ) {
+                  Column(
+                      Modifier.fillMaxWidth().padding(24.dp),
+                      verticalArrangement = Arrangement.spacedBy(12.dp),
+                      horizontalAlignment = Alignment.CenterHorizontally
+                  ) {
+                      Text("Local model required", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                      Text(
+                          "Download Qwen3 0.6B once. After installation, chat runs locally on the phone.",
+                          color = OfflineMuted,
+                          textAlign = TextAlign.Center
+                      )
+                      Button(onClick = onOpenModels) { Text("Open Models") }
+                  }
+              }
+          }
+
           @Composable
           private fun HeroBrand() {
               Column(
@@ -829,9 +856,16 @@ private val OfflineThemeScheme = darkColorScheme(
         with:
           gradle-version: '8.11.1'
       - name: Unit tests
-        continue-on-error: true
         working-directory: ${{ env.PROJ }}
         run: gradle testDebugUnitTest --stacktrace
+
+      - name: Source validation
+        working-directory: ${{ env.PROJ }}
+        run: |
+          ! grep -R "PrivacySetupScreen" app/src/main/java || (echo "Privacy onboarding still present" && exit 1)
+          ! grep -R "General Clauses Act 5(3)" app/src/main/java || (echo "Fake recent chat seed still present" && exit 1)
+          test ! -s app/src/main/assets/models/Qwen3-1.7B-8da4w-gptq-2k.pte
+          echo "UI/privacy/storage source checks passed."
       - name: Build debug APK
         working-directory: ${{ env.PROJ }}
         run: gradle assembleDebug --stacktrace
