@@ -586,8 +586,8 @@ jobs:
                                       modifier = Modifier.weight(1f),
                                       icon = "▤",
                                       iconBrush = Brush.horizontalGradient(listOf(Color(0xFF45A9FF), Color(0xFF5B7BFF))),
-                                      title = "Summarize",
-                                      subtitle = "Text, PDF, Notes",
+                                      title = "Documents",
+                                      subtitle = "PDF & Notes",
                                       onClick = { onNavigate(AppScreen.DOCUMENTS) }
                                   )
                               }
@@ -745,8 +745,6 @@ jobs:
                               Text("On-device  •  Ready", color = OfflineMuted, fontSize = 14.sp)
                           }
                       }
-                      Text("⌫", color = Color.White, fontSize = 24.sp)
-                      Spacer(Modifier.width(18.dp))
                       Text("⋮", color = Color.White, fontSize = 28.sp)
                   }
               }
