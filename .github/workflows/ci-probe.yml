@@ -7,6 +7,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Parse build workflow
+      - name: Inspect local engine
         run: |
-          ruby -e 'require "yaml"; YAML.load_file(".github/workflows/build.yml"); puts "YAML parse OK"'
+          mkdir -p /tmp/src
+          unzip -q ./*.zip -d /tmp/src
+          find /tmp/src -name ExecuTorchLocalEngine.kt -print -exec sed -n '1,260p' {} \;
