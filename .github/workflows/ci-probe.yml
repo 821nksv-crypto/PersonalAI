@@ -1,0 +1,19 @@
+name: CI Probe
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Inspect chat and engine sources
+        run: |
+          mkdir -p /tmp/src
+          unzip -q ./*.zip -d /tmp/src
+          echo "=== ENGINE FILES ==="
+          find /tmp/src -name '*Engine*.kt' -o -name '*Chat*.kt' | sort
+          echo "=== ENGINE ==="
+          find /tmp/src -name 'ExecuTorchLocalEngine.kt' -print -exec sed -n '1,320p' {} \;
+          echo "=== CHAT REFERENCES ==="
+          grep -RniE 'LocalEngine|generate\(|stream|sendMessage|onSend|ChatViewModel|LlmModule' /tmp/src --include='*.kt' | head -n 300
