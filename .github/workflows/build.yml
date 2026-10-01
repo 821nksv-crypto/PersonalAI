@@ -11,6 +11,8 @@ jobs:
         run: |
           mkdir src
           unzip -q ./*.zip -d src
+          echo "Patching unavailable ExecuTorch Android version 1.5.0 -> 1.4.0"
+          grep -RIl --include='build.gradle' --include='build.gradle.kts' --include='libs.versions.toml' 'org.pytorch:executorch-android:1.5.0' src | xargs -r sed -i 's/org\.pytorch:executorch-android:1\.5\.0/org.pytorch:executorch-android:1.4.0/g'
           P=$(dirname "$(find src -name settings.gradle.kts | head -1)")
           echo "PROJ=$P" >> $GITHUB_ENV
       - uses: actions/setup-java@v4
