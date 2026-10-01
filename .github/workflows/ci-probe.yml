@@ -6,4 +6,7 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - run: echo "PersonalAI Actions probe OK"
+      - uses: actions/checkout@v4
+      - name: Parse build workflow
+        run: |
+          ruby -e 'require "yaml"; YAML.load_file(".github/workflows/build.yml"); puts "YAML parse OK"'
