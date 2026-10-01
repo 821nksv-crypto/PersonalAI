@@ -186,23 +186,23 @@ jobs:
           replace("ExecuTorchLocalEngine.kt",
                   "    fun stopStreaming() {",
                   """    private fun applySystemInstructions(prompt: String): String {
-        if (prompt.contains("<|im_start|>system")) return prompt
-        var dir = modelFile.parentFile
-        repeat(8) {
-            val candidate = dir?.resolve("personalai_ai_instructions.txt")
-            if (candidate?.isFile == true) {
-                val instruction = candidate.readText().trim()
-                if (instruction.isNotBlank()) {
-                    return "<|im_start|>system\\n" + instruction +
-                        "<|im_end|>\\n" + prompt
-                }
-            }
-            dir = dir?.parentFile
-        }
-        return prompt
-    }
+          if (prompt.contains("<|im_start|>system")) return prompt
+          var dir = modelFile.parentFile
+          repeat(8) {
+              val candidate = dir?.resolve("personalai_ai_instructions.txt")
+              if (candidate?.isFile == true) {
+                  val instruction = candidate.readText().trim()
+                  if (instruction.isNotBlank()) {
+                      return "<|im_start|>system\\n" + instruction +
+                          "<|im_end|>\\n" + prompt
+                  }
+              }
+              dir = dir?.parentFile
+          }
+          return prompt
+      }
 
-    fun stopStreaming() {""")
+      fun stopStreaming() {""")
 
           write_new("app/src/main/java/com/personalai/mvp/models/ModelDownloader.kt", """package com.personalai.mvp.models
 
