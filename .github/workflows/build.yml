@@ -7,6 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Unzip and patch project sources
         shell: bash
         run: |
@@ -15,7 +16,7 @@ jobs:
           unzip -q ./*.zip -d src
           python3 <<'PY'
           from pathlib import Path
-          import re
+
           root = next(p.parent for p in Path("src").rglob("settings.gradle.kts"))
 
           def file(name):
@@ -24,13 +25,17 @@ jobs:
                   raise SystemExit(f"Expected exactly one {name}, found {len(matches)}")
               return matches[0]
 
-          def replace_exact(name, old, new):
+          def write(name, text):
+              file(name).write_text(text)
+
+          def replace(name, old, new, count=1):
               p = file(name)
               s = p.read_text()
               if old not in s:
-                  raise SystemExit(f"Patch anchor not found in {p}: {old[:100]!r}")
-              p.write_text(s.replace(old, new, 1))
+                  raise SystemExit(f"Patch anchor not found in {p}: {old[:120]!r}")
+              p.write_text(s.replace(old, new, count))
 
+          # ExecuTorch artifact available to this build.
           for p in root.rglob("*"):
               if p.is_file() and p.suffix in {".gradle", ".kts", ".toml"}:
                   s = p.read_text()
@@ -39,23 +44,72 @@ jobs:
                   if ns != s:
                       p.write_text(ns)
 
-          p = file("DocumentImportCoordinator.kt")
-          s = p.read_text()
-          s = re.sub(r'\n?data class ImportedDocument\([\s\S]*?\n\)\s*$', '\n', s)
-          s = s.replace(
-              "return ImportedDocument(id, displayName, target)",
-              "return ImportedDocument(id, displayName, target.absolutePath, target.length(), sha256(target))"
-          )
-          s = s.replace("import java.util.UUID", "import java.util.UUID\nimport java.security.MessageDigest")
-          if "private fun sha256(file: File)" not in s:
-              s += '\nprivate fun sha256(file: File): String = MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") { "%02x".format(it) }\n'
-          p.write_text(s)
+          # Use the five-field persisted ImportedDocument model everywhere.
+          write("DocumentImportCoordinator.kt", """package com.personalai.mvp.documents
 
-          replace_exact("RagOrchestrator.kt",
-                        "private val index: LocalVectorIndex",
-                        "private val index: PersistentVectorIndex")
+import android.content.Context
+import java.io.File
+import java.io.FileInputStream
+import java.security.MessageDigest
+import java.util.UUID
 
-          replace_exact("ExecuTorchLocalEngine.kt",
+class DocumentImportCoordinator(private val context: Context) {
+    private val controller = DocumentLibraryController(context)
+
+    fun importPdf(source: File, displayName: String): ImportedDocument {
+        val id = UUID.randomUUID().toString()
+        val safeName = displayName.replace(Regex("[^A-Za-z0-9._-]"), "_")
+        val target = File(context.filesDir, "documents/$id-$safeName")
+        target.parentFile?.mkdirs()
+
+        FileInputStream(source).use { input ->
+            target.outputStream().use { output ->
+                input.copyTo(output, 1024 * 1024)
+                output.fd.sync()
+            }
+        }
+
+        controller.registerImported(id, displayName, target.absolutePath)
+        return ImportedDocument(id, displayName, target.absolutePath, target.length(), sha256(target))
+    }
+
+    private fun sha256(file: File): String =
+        MessageDigest.getInstance("SHA-256").digest(file.readBytes())
+            .joinToString("") { "%02x".format(it) }
+}
+""")
+
+          # Progress observer must use the actual top-level ObservedWorkState
+          # and the current WorkManagerIndexingObserver API.
+          write("DocumentProgressBridge.kt", """package com.personalai.mvp.documents
+
+import androidx.lifecycle.LifecycleOwner
+import com.personalai.mvp.indexing.ObservedWorkState
+import com.personalai.mvp.indexing.WorkManagerIndexingObserver
+
+class DocumentProgressBridge(private val observer: WorkManagerIndexingObserver) {
+    fun observe(
+        owner: LifecycleOwner,
+        documentId: String,
+        onUpdate: (ObservedWorkState) -> Unit
+    ) {
+        observer.observe(documentId).observe(owner) { infos ->
+            observer.update(documentId, infos ?: emptyList())
+            observer.state.value.lastOrNull()?.let(onUpdate)
+        }
+    }
+
+    fun cancel(documentId: String) = observer.cancel(documentId)
+}
+""")
+
+          # Production RAG uses PersistentVectorIndex.
+          replace("RagOrchestrator.kt",
+                  "private val index: LocalVectorIndex",
+                  "private val index: PersistentVectorIndex")
+
+          # ExecuTorch 1.4.0 exposes load() as Unit.
+          replace("ExecuTorchLocalEngine.kt",
 """            val m = LlmModule(config)
             val status = m.load()
             if (status == 0) module = m else loadError = "ExecuTorch load error: $status"
@@ -65,73 +119,51 @@ jobs:
             module = m
 """)
 
-          p = file("DocumentProgressBridge.kt")
-          p.write_text("""package com.personalai.mvp.documents
+          # DocumentChunk must carry page number because RAG source formatting uses it.
+          write("DocumentChunk.kt", """package com.personalai.mvp.rag
 
-          import androidx.lifecycle.LifecycleOwner
-          import com.personalai.mvp.indexing.ObservedWorkState
-          import com.personalai.mvp.indexing.WorkManagerIndexingObserver
+data class DocumentChunk(
+    val documentName: String,
+    val pageNumber: Int,
+    val chunkIndex: Int,
+    val text: String
+)
+""")
+          replace("LocalDocumentStore.kt",
+                  "DocumentChunk(name, i, part)",
+                  "DocumentChunk(name, 0, i, part)")
 
-          class DocumentProgressBridge(private val observer: WorkManagerIndexingObserver) {
-              fun observe(
-                  owner: LifecycleOwner,
-                  documentId: String,
-                  onUpdate: (ObservedWorkState) -> Unit
-              ) {
-                  observer.observe(documentId).observe(owner) { infos ->
-                      observer.update(documentId, infos ?: emptyList())
-                      observer.state.value.lastOrNull()?.let(onUpdate)
-                  }
-              }
+          # WorkManager progress callback is not suspend; progressReporter is sufficient there.
+          replace("DocumentIndexWorker.kt",
+"""                progressReporter.running(documentId, processed, total)
+                setProgress(Data.Builder()
+                    .putString(KEY_STATUS, "RUNNING")
+                    .putInt(KEY_PROGRESS, ((processed.toDouble() / total.coerceAtLeast(1) * 100.0)).toInt())
+                    .putInt("processedPages", processed)
+                    .putInt("totalPages", total)
+                    .putString("documentId", documentId)
+                    .build())
+""",
+"""                progressReporter.running(documentId, processed, total)
+""")
 
-              fun cancel(documentId: String) = observer.cancel(documentId)
-          }
-          """)
+          replace("IndexingController.kt",
+                  "import androidx.lifecycle.LiveData",
+                  "import androidx.lifecycle.LiveData\nimport androidx.lifecycle.map")
 
-          p = file("DocumentIndexWorker.kt")
-          s = p.read_text()
-          s, n = re.subn(
-              r'\n\s*setProgress\(Data\.Builder\(\)\n\s*\.putString\(KEY_STATUS, "RUNNING"\).*?\.build\(\)',
-              '',
-              s,
-              flags=re.S
-          )
-          if n != 1:
-              raise SystemExit(f"Expected one non-suspend setProgress callback in {p}, removed {n}")
-          p.write_text(s)
+          replace("OnnxMiniLmEmbedder.kt",
+                  "longArrayOf(1, maxLength)",
+                  "longArrayOf(1L, maxLength.toLong())",
+                  count=3)
 
-          replace_exact("IndexingController.kt",
-                        "import androidx.lifecycle.LiveData",
-                        "import androidx.lifecycle.LiveData\nimport androidx.lifecycle.map")
+          # ModelVerifier is canonical; remove the duplicate declaration only.
+          replace("ModelInstallVerifier.kt",
+                  "data class VerificationResult(val ok: Boolean, val reason: String)\n\n",
+                  "")
 
-          p = file("OnnxMiniLmEmbedder.kt")
-          p.write_text(p.read_text().replace(
-              "longArrayOf(1, maxLength)",
-              "longArrayOf(1L, maxLength.toLong())"
-          ))
-
-          replace_exact("PdfTextExtractor.kt",
-"""DocumentChunk(
-                    documentName = displayName,
-                    pageNumber = page,
-                    chunkIndex = idx,
-                    text = piece
-                )""",
-"""DocumentChunk(
-                    documentName = displayName,
-                    chunkIndex = idx,
-                    text = piece
-                )""")
-
-          p = file("ModelInstallVerifier.kt")
-          s = p.read_text()
-          s, n = re.subn(r'\ndata class VerificationResult\(val ok: Boolean, val reason: String\)\n',
-                         '\n', s, count=1)
-          if n != 1:
-              raise SystemExit(f"Expected duplicate VerificationResult in {p}")
-          p.write_text(s)
           print("Source compatibility patches applied.")
           PY
+
           P=$(dirname "$(find src -name settings.gradle.kts | head -1)")
           echo "PROJ=$P" >> "$GITHUB_ENV"
 
@@ -139,18 +171,23 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+
       - name: Accept Android licenses
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.11.1'
+
       - name: Unit tests
         continue-on-error: true
         working-directory: \${{ env.PROJ }}
         run: gradle testDebugUnitTest --stacktrace
+
       - name: Build debug APK
         working-directory: \${{ env.PROJ }}
         run: gradle assembleDebug --stacktrace
+
       - uses: actions/upload-artifact@v4
         with:
           name: personalai-debug-apk
