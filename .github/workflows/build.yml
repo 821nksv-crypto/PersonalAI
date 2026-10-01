@@ -149,7 +149,373 @@ jobs:
                   "data class VerificationResult(val ok: Boolean, val reason: String)\n\n",
                   "")
           
-          print("Source compatibility patches applied.")
+
+          
+          write("ModelDownloader.kt", """package com.personalai.mvp.models
+          
+          import android.content.Context
+          import com.personalai.mvp.importer.ImportResult
+          import java.io.File
+          import java.net.HttpURLConnection
+          import java.net.URL
+          import java.util.UUID
+          import kotlinx.coroutines.Dispatchers
+          import kotlinx.coroutines.withContext
+          import org.json.JSONObject
+          import com.personalai.mvp.model.ModelVerifier
+          
+          class ModelDownloader(
+              private val context: Context,
+              private val importService: ModelImportService
+          ) {
+              companion object {
+                  private const val MODEL_URL =
+                      "https://huggingface.co/experimentalmachines/Qwen3-0.6B-ExecuTorch/resolve/c1899de289a0/xnnpack/Qwen3-0.6B-8da4w-2k.pte"
+                  private const val TOKENIZER_URL =
+                      "https://huggingface.co/experimentalmachines/Qwen3-0.6B-ExecuTorch/resolve/c1899de289a0/tokenizer.json"
+                  private const val MODEL_FILE = "Qwen3-0.6B-8da4w-2k.pte"
+                  private const val TOKENIZER_FILE = "tokenizer.json"
+                  private const val MODEL_ID = "qwen3-0.6b-xnnpack-8da4w-2k"
+                  private const val MODEL_VERSION = "1.0"
+              }
+          
+              suspend fun downloadAndInstall(
+                  onProgress: (downloaded: Long, total: Long) -> Unit = { _, _ -> }
+              ): String = withContext(Dispatchers.IO) {
+                  val modelsDir = File(context.filesDir, "models/incoming").apply { mkdirs() }
+                  if (modelsDir.usableSpace < 800L * 1024L * 1024L) {
+                      throw IllegalStateException("At least 800 MB of free app storage is required.")
+                  }
+          
+                  val model = File(modelsDir, MODEL_FILE)
+                  val tokenizer = File(modelsDir, TOKENIZER_FILE)
+                  val modelPart = File(modelsDir, "$MODEL_FILE.part")
+                  val tokenizerPart = File(modelsDir, "$TOKENIZER_FILE.part")
+          
+                  try {
+                      download(MODEL_URL, modelPart, onProgress)
+                      require(modelPart.renameTo(model)) { "Could not finalize downloaded model." }
+                      download(TOKENIZER_URL, tokenizerPart) { done, total -> onProgress(done, total) }
+                      require(tokenizerPart.renameTo(tokenizer)) { "Could not finalize downloaded tokenizer." }
+          
+                      require(model.isFile && model.length() > 0) { "Downloaded model is empty." }
+                      require(tokenizer.isFile && tokenizer.length() > 0) { "Downloaded tokenizer is empty." }
+          
+                      val manifest = JSONObject()
+                          .put("id", MODEL_ID)
+                          .put("displayName", "Qwen3 0.6B • XNNPACK 2K")
+                          .put("version", MODEL_VERSION)
+                          .put("runtime", "executorch")
+                          .put("architecture", "arm64-v8a")
+                          .put("fileName", MODEL_FILE)
+                          .put("sizeBytes", model.length())
+                          .put("sha256", ModelVerifier.sha256(model))
+                          .put("tokenizerFileName", TOKENIZER_FILE)
+                          .put("tokenizerSha256", ModelVerifier.sha256(tokenizer))
+          
+                      val manifestFile = File(modelsDir, "qwen3-0.6b-manifest.json")
+                      manifestFile.writeText(manifest.toString())
+          
+                      val pair = SelectedModelPair(UUID.randomUUID().toString(), model, manifestFile, tokenizer)
+                      when (val result = importService.verifyAndInstall(pair)) {
+                          is ImportResult.Success -> result.message
+                          is ImportResult.Failure -> throw IllegalStateException(result.message)
+                          is ImportResult.Cancelled -> throw IllegalStateException("Model installation cancelled.")
+                      }
+                  } catch (t: Throwable) {
+                      modelPart.delete()
+                      tokenizerPart.delete()
+                      throw t
+                  }
+              }
+          
+              private fun download(
+                  sourceUrl: String,
+                  destination: File,
+                  onProgress: (Long, Long) -> Unit
+              ) {
+                  destination.parentFile?.mkdirs()
+                  val connection = (URL(sourceUrl).openConnection() as HttpURLConnection).apply {
+                      requestMethod = "GET"
+                      connectTimeout = 30_000
+                      readTimeout = 60_000
+                      instanceFollowRedirects = true
+                      setRequestProperty("User-Agent", "PersonalAI/1.0")
+                  }
+                  try {
+                      val code = connection.responseCode
+                      if (code !in 200..299) throw IllegalStateException("Model server returned HTTP $code")
+                      val total = connection.contentLengthLong
+                      var downloaded = 0L
+                      connection.inputStream.buffered().use { input ->
+                          destination.outputStream().buffered().use { output ->
+                              val buffer = ByteArray(1024 * 1024)
+                              while (true) {
+                                  val n = input.read(buffer)
+                                  if (n < 0) break
+                                  output.write(buffer, 0, n)
+                                  downloaded += n
+                                  onProgress(downloaded, total)
+                              }
+                              output.flush()
+                          }
+                      }
+                      if (total > 0L && downloaded != total) {
+                          throw IllegalStateException("Incomplete download: $downloaded / $total bytes")
+                      }
+                  } finally {
+                      connection.disconnect()
+                  }
+              }
+          }
+          """)
+          
+          replace("ModelImportScreen.kt",
+                  "package com.personalai.mvp.importer",
+                  """package com.personalai.mvp.importer""",
+                  count=0)
+          
+          write("ModelImportScreen.kt", """package com.personalai.mvp.importer
+          
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.material3.*
+          import androidx.compose.runtime.Composable
+          import androidx.compose.ui.Modifier
+          import androidx.compose.ui.unit.dp
+          
+          @Composable
+          fun ModelImportScreen(
+              installedModels: List<String>,
+              onImport: () -> Unit,
+              onRemove: (String) -> Unit,
+              onDownload: () -> Unit,
+              downloading: Boolean,
+              downloadProgress: Float,
+              downloadStatus: String
+          ) {
+              Column(
+                  Modifier.fillMaxSize().padding(16.dp),
+                  verticalArrangement = Arrangement.spacedBy(12.dp)
+              ) {
+                  Text("Local Models", style = MaterialTheme.typography.headlineSmall)
+                  Text(
+                      "Recommended: Qwen3 0.6B, quantized for ExecuTorch/XNNPACK. " +
+                          "It downloads once and then runs locally.",
+                      style = MaterialTheme.typography.bodyMedium
+                  )
+                  Button(
+                      onClick = onDownload,
+                      enabled = !downloading,
+                      modifier = Modifier.fillMaxWidth()
+                  ) {
+                      Text(if (downloading) "Downloading model…" else "Download Recommended Model")
+                  }
+                  if (downloading) {
+                      LinearProgressIndicator(
+                          progress = { downloadProgress.coerceIn(0f, 1f) },
+                          modifier = Modifier.fillMaxWidth()
+                      )
+                  }
+                  if (downloadStatus.isNotBlank()) {
+                      Text(downloadStatus, style = MaterialTheme.typography.bodySmall)
+                  }
+                  OutlinedButton(
+                      onClick = onImport,
+                      enabled = !downloading,
+                      modifier = Modifier.fillMaxWidth()
+                  ) {
+                      Text("Import Local Model")
+                  }
+          
+                  if (installedModels.isEmpty()) {
+                      Text("No local models installed.")
+                  } else {
+                      installedModels.forEach { model ->
+                          ListItem(
+                              headlineContent = { Text(model) },
+                              trailingContent = {
+                                  TextButton(onClick = { onRemove(model) }) {
+                                      Text("Remove")
+                                  }
+                              }
+                          )
+                      }
+                  }
+              }
+          }
+          """)
+          
+          write("PersonalAiAppShell.kt", """package com.personalai.mvp.shell
+          
+          import androidx.compose.runtime.*
+          import androidx.compose.material3.*
+          import com.personalai.mvp.appstate.AppScreen
+          import com.personalai.mvp.appstate.AppStateRepository
+          import com.personalai.mvp.onboarding.PrivacySetupScreen
+          import com.personalai.mvp.settings.SettingsScreen
+          import com.personalai.mvp.rag.EmbeddingStatus
+          import com.personalai.mvp.documents.DocumentLibraryScreen
+          import com.personalai.mvp.documents.DocumentUiItem
+          import com.personalai.mvp.importer.ModelImportScreen
+          import androidx.compose.foundation.layout.*
+          import androidx.compose.ui.Modifier
+          
+          @Composable
+          fun PersonalAiAppShell(
+              appState: AppStateRepository,
+              documents: List<DocumentUiItem>,
+              installedModels: List<String>,
+              modelReady: Boolean,
+              memoryEnabled: Boolean,
+              onImportPdf: () -> Unit,
+              onCancelIndexing: (String) -> Unit,
+              onDeleteDocument: (String) -> Unit,
+              onRetryIndexing: (DocumentUiItem) -> Unit,
+              requiresReindex: Boolean,
+              onReindexAll: () -> Unit,
+              onImportModel: () -> Unit,
+              onRemoveModel: (String) -> Unit,
+              onDownloadModel: () -> Unit,
+              downloadingModel: Boolean,
+              downloadProgress: Float,
+              downloadStatus: String,
+              onClearMemory: () -> Unit,
+              onMemoryChanged: (Boolean) -> Unit,
+              embeddingStatus: EmbeddingStatus,
+              onImportEmbedding: () -> Unit,
+              onRemoveEmbedding: () -> Unit,
+              chatContent: @Composable () -> Unit
+          ) {
+              val state by appState.state.collectAsState()
+          
+              if (!state.privacySetupComplete) {
+                  PrivacySetupScreen(onContinue = { appState.completePrivacySetup() })
+                  return
+              }
+          
+              when (state.currentScreen) {
+                  AppScreen.CHAT -> MainScaffold(AppScreen.CHAT, appState::navigate) { chatContent() }
+                  AppScreen.DOCUMENTS -> MainScaffold(AppScreen.DOCUMENTS, appState::navigate) {
+                      DocumentLibraryScreen(
+                          documents = documents,
+                          onImportPdf = onImportPdf,
+                          onCancel = onCancelIndexing,
+                          onDelete = onDeleteDocument,
+                          onRetry = onRetryIndexing,
+                          requiresReindex = requiresReindex,
+                          onReindexAll = onReindexAll
+                      )
+                  }
+                  AppScreen.MODELS -> MainScaffold(AppScreen.MODELS, appState::navigate) {
+                      ModelImportScreen(
+                          installedModels = installedModels,
+                          onImport = onImportModel,
+                          onRemove = onRemoveModel,
+                          onDownload = onDownloadModel,
+                          downloading = downloadingModel,
+                          downloadProgress = downloadProgress,
+                          downloadStatus = downloadStatus
+                      )
+                  }
+                  AppScreen.SETTINGS -> MainScaffold(AppScreen.SETTINGS, appState::navigate) {
+                      SettingsScreen(
+                          internetEnabled = state.internetEnabled,
+                          memoryEnabled = memoryEnabled,
+                          modelReady = modelReady,
+                          onInternetChanged = appState::setInternetEnabled,
+                          onMemoryChanged = onMemoryChanged,
+                          onClearMemory = onClearMemory,
+                          embeddingStatus = embeddingStatus,
+                          onImportEmbedding = onImportEmbedding,
+                          onRemoveEmbedding = onRemoveEmbedding
+                      )
+                  }
+              }
+          }
+          
+          @Composable
+          private fun MainScaffold(
+              selected: AppScreen,
+              onSelect: (AppScreen) -> Unit,
+              content: @Composable () -> Unit
+          ) {
+              Scaffold(
+                  bottomBar = {
+                      NavigationBar {
+                          listOf(
+                              AppScreen.CHAT to "Chat",
+                              AppScreen.DOCUMENTS to "Documents",
+                              AppScreen.MODELS to "Models",
+                              AppScreen.SETTINGS to "Settings"
+                          ).forEach { (screen, label) ->
+                              NavigationBarItem(
+                                  selected = selected == screen,
+                                  onClick = { onSelect(screen) },
+                                  icon = {},
+                                  label = { Text(label) }
+                              )
+                          }
+                      }
+                  }
+              ) { padding ->
+                  Box(Modifier.fillMaxSize().padding(padding)) { content() }
+              }
+          }
+          """)
+          
+          replace("PersonalAiHostActivity.kt",
+                  "import com.personalai.mvp.models.SelectedModelPair",
+                  """import com.personalai.mvp.models.SelectedModelPair
+          import com.personalai.mvp.models.ModelDownloader
+          import androidx.lifecycle.lifecycleScope""")
+          replace("PersonalAiHostActivity.kt",
+                  "private val modelImportService by lazy { ModelImportService(this) }",
+                  """private val modelImportService by lazy { ModelImportService(this) }
+              private val modelDownloader by lazy { ModelDownloader(this, modelImportService) }""")
+          replace("PersonalAiHostActivity.kt",
+                  "var requiresReindex by remember { mutableStateOf(coordinator.documents.requiresReindex()) }",
+                  """var requiresReindex by remember { mutableStateOf(coordinator.documents.requiresReindex()) }
+              var downloadingModel by remember { mutableStateOf(false) }
+              var downloadProgress by remember { mutableStateOf(0f) }
+              var downloadStatus by remember { mutableStateOf("") }""")
+          replace("PersonalAiHostActivity.kt",
+                  "                    onImportModel = {",
+                  """                    onDownloadModel = {
+                        if (downloadingModel) return@PersonalAiAppShell
+                        lifecycleScope.launch {
+                            downloadingModel = true
+                            downloadProgress = 0f
+                            downloadStatus = "Preparing model download…"
+                            try {
+                                val message = modelDownloader.downloadAndInstall { downloaded, total ->
+                                    runOnUiThread {
+                                        downloadProgress = if (total > 0L) downloaded.toFloat() / total.toFloat() else 0f
+                                        downloadStatus = if (total > 0L) {
+                                            "Downloading ${(downloadProgress * 100).toInt()}%"
+                                        } else {
+                                            "Downloading ${downloaded / (1024 * 1024)} MB"
+                                        }
+                                    }
+                                }
+                                downloadStatus = message
+                                installedModels = coordinator.models.installed()
+                            } catch (t: Throwable) {
+                                downloadStatus = "Download failed: ${t.message ?: t.javaClass.simpleName}"
+                            } finally {
+                                downloadingModel = false
+                            }
+                        }
+                    },
+                    onImportModel = {""")
+          replace("PersonalAiHostActivity.kt",
+                  "                    onRemoveModel = coordinator.models::remove,",
+                  """                    onRemoveModel = coordinator.models::remove,
+                    downloadingModel = downloadingModel,
+                    downloadProgress = downloadProgress,
+                    downloadStatus = downloadStatus,""")
+          
+
+                    print("Source compatibility patches applied.")
           
           PY
           P=$(dirname "$(find src -name settings.gradle.kts | head -1)")
