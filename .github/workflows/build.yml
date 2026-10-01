@@ -910,6 +910,13 @@ jobs:
                     downloadStatus = downloadStatus,""")
           
 
+          for f in root.rglob("*.kt"):
+              t = f.read_text()
+              if "Privacy-first setup" in t or "Your Personal AI" in t:
+                  print("ONBOARDING_SOURCE:", f)
+                  for line in t.splitlines():
+                      if "Privacy-first setup" in line or "Your Personal AI" in line or "SharedPreferences" in line or "onboarding" in line.lower():
+                          print("  ", line[:240])
           print("Source compatibility patches applied.")
           
           PY
