@@ -737,46 +737,7 @@ jobs:
                   for line in t.splitlines():
                       if "Privacy-first setup" in line or "Your Personal AI" in line or "SharedPreferences" in line or "onboarding" in line.lower():
                           print("  ", line[:240])
-          print("===== STARTUP HOST DIAGNOSTIC =====")
-          for fp in root.rglob("*.kt"):
-              if fp.name == "PersonalAiHostActivity.kt":
-                  print(f"===== HOST FILE {fp} =====")
-                  print(fp.read_text(errors="replace"))
-          manifest_debug = root / "app/src/main/AndroidManifest.xml"
-          if manifest_debug.exists():
-              print("===== ANDROID MANIFEST =====")
-              print(manifest_debug.read_text(errors="replace"))
-          print("===== END STARTUP HOST DIAGNOSTIC =====")
-          
-          # Defer AppRuntime construction until after the first Compose frame.
-          host = file("PersonalAiHostActivity.kt")
-          hs = host.read_text()
-          hs = hs.replace("        runtime = AppRuntime(this)\n", "")
-          old = "                val coordinator = runtime.coordinator\n"
-          new = """                if (!::runtime.isInitialized) {
-                              LaunchedEffect(Unit) {
-                                  delay(300)
-                                  runCatching { runtime = AppRuntime(this@PersonalAiHostActivity) }
-                              }
-                              androidx.compose.material3.Text("Starting PersonalAI…")
-                          } else {
-                              val coordinator = runtime.coordinator
-          """
-          hs = hs.replace(old, new, 1)
-          needle = "\n    private fun handleSelectedPdf"
-          pos = hs.find(needle)
-          if pos < 0:
-              raise SystemExit("Could not find handleSelectedPdf")
-          prefix = hs[:pos]
-          close = "\n        }\n    }\n"
-          close_pos = prefix.rfind(close)
-          if close_pos < 0:
-              raise SystemExit("Could not find setContent closing braces")
-          hs = prefix[:close_pos] + "\n                }" + prefix[close_pos:] + hs[pos:]
-          host.write_text(hs)
-          print("Deferred AppRuntime initialization until after first UI frame.")
-                    
-                    print("===== DOCUMENT SUMMARY DIAGNOSTIC =====")
+          print("===== DOCUMENT SUMMARY DIAGNOSTIC =====")
           for fp in root.rglob("*.kt"):
               name = fp.name.lower()
               if any(k in name for k in ("document", "chat", "summary", "rag")):
