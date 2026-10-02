@@ -77,8 +77,8 @@ class ExecuTorchLocalEngine(
         try {
             generating.set(true)
             val config = LlmGenerationConfig.create()
-                .seqLen(2048)
-                .maxNewTokens(192)
+                .seqLen(512)
+                .maxNewTokens(96)
                 .temperature(0.7f)
                 .echo(false)
                 .build()
@@ -111,7 +111,7 @@ class ExecuTorchLocalEngine(
             try {
                 val m = loadModule()
                 val config = LlmGenerationConfig.create()
-                    .seqLen(1024)
+                    .seqLen(512)
                     .maxNewTokens(96)
                     .temperature(0.7f)
                     .echo(false)
@@ -151,19 +151,29 @@ class ExecuTorchLocalEngine(
     }
 
     private fun applySystemInstructions(prompt: String): String {
+        // The ExecuTorch exports used here are chat-tuned models with ChatML templates.
+        // Do not send the old USER:/ASSISTANT: wrapper; it is not the format these exports
+        // were trained on.
         if (prompt.contains("<|im_start|>system")) return prompt
+        val instruction = findLocalInstruction()
+        val system = if (instruction.isNotBlank()) instruction
+        else "You are a helpful AI assistant named SmolLM, trained by Hugging Face"
+        return "<|im_start|>system\\n" + system + "<|im_end|>\\n" +
+            "<|im_start|>user\\n" + prompt + "<|im_end|>\\n" +
+            "<|im_start|>assistant\\n"
+    }
+
+    private fun findLocalInstruction(): String {
         var dir = modelFile.parentFile
         repeat(8) {
             val candidate = dir?.resolve("personalai_ai_instructions.txt")
             if (candidate?.isFile == true) {
                 val instruction = candidate.readText().trim()
-                if (instruction.isNotBlank()) {
-                    return "<|im_start|>system\n" + instruction + "<|im_end|>\n" + prompt
-                }
+                if (instruction.isNotBlank()) return instruction
             }
             dir = dir?.parentFile
         }
-        return prompt
+        return ""
     }
 
     private fun validateModelForDevice() {
