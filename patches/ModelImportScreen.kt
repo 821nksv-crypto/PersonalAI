@@ -30,7 +30,7 @@ fun ModelImportScreen(
         ) {
             Text("Local AI Models", color = TextPrimary, style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Qwen2.5 0.5B • XNNPACK • 2K is the lightweight local model for phones. It is downloaded only when you choose it, stored locally, and then runs offline.",
+                "SmolLM2-135M-Instruct • XNNPACK • 2K is the lightweight local model for phones. It is downloaded only when you choose it, stored locally, and then runs offline.",
                 color = TextSecondary,
                 style = MaterialTheme.typography.bodyMedium
             )
@@ -40,7 +40,7 @@ fun ModelImportScreen(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Color.White)
             ) {
-                Text(if (downloading) "Downloading model…" else "Download Qwen2.5 0.5B")
+                Text(if (downloading) "Downloading model…" else "Download SmolLM2-135M-Instruct")
             }
             if (downloading) {
                 LinearProgressIndicator(
