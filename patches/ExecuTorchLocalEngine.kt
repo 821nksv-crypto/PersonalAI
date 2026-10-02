@@ -52,20 +52,24 @@ class ExecuTorchLocalEngine(
         } catch (t: Throwable) {
             return@withContext "Local model could not be loaded: " + (t.message ?: t.javaClass.simpleName)
         }
-        val out = StringBuilder()
+
+        val output = StringBuilder()
         val done = Object()
         var finished = false
         var error: String? = null
+
         val callback = object : LlmCallback {
             override fun onResult(token: String) {
-                synchronized(done) { out.append(token) }
+                synchronized(done) { output.append(token) }
             }
+
             override fun onStats(statsJson: String) {
                 synchronized(done) {
                     finished = true
                     done.notifyAll()
                 }
             }
+
             override fun onError(errorCode: Int, message: String) {
                 synchronized(done) {
                     error = "Inference error " + errorCode + ": " + message
@@ -74,6 +78,7 @@ class ExecuTorchLocalEngine(
                 }
             }
         }
+
         try {
             generating.set(true)
             val config = LlmGenerationConfig.create()
@@ -83,10 +88,19 @@ class ExecuTorchLocalEngine(
                 .echo(false)
                 .warming(false)
                 .build()
-            // DIAGNOSTIC STEP: verify native model loading without entering the
-            // XNNPACK generation kernel. The current APK exits during inference,
-            // so isolate load() from generate() before changing the model/backend.
-            "Diagnostic: local model loaded successfully. Inference call is temporarily isolated."
+
+            m.generate(applySystemInstructions(prompt), config, callback)
+
+            synchronized(done) {
+                if (!finished) done.wait(120_000L)
+            }
+
+            when {
+                error != null -> "Local inference failed: $error"
+                output.isNotBlank() -> output.toString().trim()
+                !finished -> "Local inference timed out before the model returned a response."
+                else -> "The local model returned an empty response."
+            }
         } catch (t: Throwable) {
             "Local inference failed: " + (t.message ?: t.javaClass.simpleName)
         } finally {
