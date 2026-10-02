@@ -81,6 +81,7 @@ class ExecuTorchLocalEngine(
                 .maxNewTokens(64)
                 .temperature(0.7f)
                 .echo(false)
+                .warming(false)
                 .build()
             m.generate(applySystemInstructions(prompt), config, callback)
             synchronized(done) {
