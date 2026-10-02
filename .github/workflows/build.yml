@@ -737,6 +737,17 @@ jobs:
                   for line in t.splitlines():
                       if "Privacy-first setup" in line or "Your Personal AI" in line or "SharedPreferences" in line or "onboarding" in line.lower():
                           print("  ", line[:240])
+          print("===== STARTUP HOST DIAGNOSTIC =====")
+          for fp in root.rglob("*.kt"):
+              if fp.name == "PersonalAiHostActivity.kt":
+                  print(f"===== HOST FILE {fp} =====")
+                  print(fp.read_text(errors="replace"))
+          manifest_debug = root / "app/src/main/AndroidManifest.xml"
+          if manifest_debug.exists():
+              print("===== ANDROID MANIFEST =====")
+              print(manifest_debug.read_text(errors="replace"))
+          print("===== END STARTUP HOST DIAGNOSTIC =====")
+          
           print("===== DOCUMENT SUMMARY DIAGNOSTIC =====")
           for fp in root.rglob("*.kt"):
               name = fp.name.lower()
