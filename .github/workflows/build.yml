@@ -737,6 +737,31 @@ jobs:
                   for line in t.splitlines():
                       if "Privacy-first setup" in line or "Your Personal AI" in line or "SharedPreferences" in line or "onboarding" in line.lower():
                           print("  ", line[:240])
+          # Startup hardening: do not construct document/model/indexing controllers during AppRuntime creation.
+          replace("AppCoordinator.kt",
+                  """    val state = AppStateRepository(appContext)
+              val documents = DocumentLibraryController(appContext)
+              val models = ModelLibraryController(appContext)""",
+                  """    val state by lazy { AppStateRepository(appContext) }
+              val documents by lazy { DocumentLibraryController(appContext) }
+              val models by lazy { ModelLibraryController(appContext) }""")
+          # Surface Java/Kotlin startup exceptions instead of letting Android immediately kill the Activity.
+          replace("PersonalAiHostActivity.kt",
+                  """        runtime = AppRuntime(this)
+
+                  setContent {""",
+                  """        try {
+                      runtime = AppRuntime(applicationContext)
+                  } catch (t: Throwable) {
+                      android.app.AlertDialog.Builder(this)
+                          .setTitle("PersonalAI startup error")
+                          .setMessage(t.stackTraceToString())
+                          .setPositiveButton("Close", null)
+                          .show()
+                      return
+                  }
+
+                  setContent {""")
           print("===== APP COORDINATOR DIAGNOSTIC =====")
           for fp in root.rglob("*.kt"):
               if fp.name == "AppCoordinator.kt":
