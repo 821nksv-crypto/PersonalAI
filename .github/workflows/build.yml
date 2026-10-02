@@ -860,13 +860,13 @@ jobs:
           PY
           rm -rf "$P/app/src/main/assets/models"
           mkdir -p "$P/app/src/main/assets/models"
-          echo "Downloading bundled SmolLM2-135M Vulkan 2K model..."
+          echo "Downloading bundled SmolLM2-135M XNNPACK 2K model..."
           MODEL_ASSET_DIR="$P/app/src/main/assets/models"
           MODEL_URL="https://huggingface.co/experimentalmachines/SmolLM2-135M-Instruct-ExecuTorch/resolve/main/xnnpack/SmolLM2-135M-Instruct-8da4w-2k.pte?download=true"
-          TOKENIZER_URL="https://huggingface.co/experimentalmachines/SmolLM2-135M-ExecuTorch/resolve/main/tokenizer.json?download=true"
+          TOKENIZER_URL="https://huggingface.co/experimentalmachines/SmolLM2-135M-Instruct-ExecuTorch/resolve/main/tokenizer.json?download=true"
           curl -fL --retry 5 --retry-delay 2 --retry-all-errors "$MODEL_URL" -o "$MODEL_ASSET_DIR/SmolLM2-135M-Instruct-8da4w-2k.pte"
           curl -fL --retry 5 --retry-delay 2 --retry-all-errors "$TOKENIZER_URL" -o "$MODEL_ASSET_DIR/tokenizer.json"
-          test -s "$MODEL_ASSET_DIR/SmolLM2-135M-vulkan-8da4w-2k.pte"
+          test -s "$MODEL_ASSET_DIR/SmolLM2-135M-Instruct-8da4w-2k.pte"
           test -s "$MODEL_ASSET_DIR/tokenizer.json"
           ls -lh "$MODEL_ASSET_DIR"
 
