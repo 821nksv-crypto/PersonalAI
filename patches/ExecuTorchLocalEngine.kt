@@ -22,6 +22,7 @@ class ExecuTorchLocalEngine(
     private val mainHandler = Handler(Looper.getMainLooper())
 
     private fun loadModule(): LlmModule {
+        validateModelForDevice()
         module?.let { return it }
         synchronized(moduleLock) {
             module?.let { return it }
@@ -163,6 +164,17 @@ class ExecuTorchLocalEngine(
             dir = dir?.parentFile
         }
         return prompt
+    }
+
+    private fun validateModelForDevice() {
+        require(modelFile.isFile && modelFile.canRead()) { "Local model file is missing or unreadable." }
+        require(tokenizerFile.isFile && tokenizerFile.canRead()) { "Tokenizer file is missing or unreadable." }
+        require(modelFile.length() <= 700L * 1024L * 1024L) {
+            "This model is too large for the lightweight PersonalAI profile. Install Qwen2.5 0.5B XNNPACK 2K."
+        }
+        require(tokenizerFile.length() <= 20L * 1024L * 1024L) {
+            "Tokenizer file is invalid or too large."
+        }
     }
 
     override fun isReady(): Boolean =
