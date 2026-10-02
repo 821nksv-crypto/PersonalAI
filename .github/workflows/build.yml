@@ -790,79 +790,84 @@ jobs:
           print("===== END DOCUMENT SUMMARY DIAGNOSTIC =====")
           # Startup guard: show the previous process-exit reason after an abnormal exit.
           guard = """package com.personalai.mvp.app
-          
-          import android.app.ActivityManager
-          import android.app.ApplicationExitInfo
-          import android.content.Intent
-          import android.os.Build
-          import android.os.Bundle
-          import androidx.activity.ComponentActivity
-          import androidx.activity.compose.setContent
-          import androidx.compose.foundation.layout.Arrangement
-          import androidx.compose.foundation.layout.Column
-          import androidx.compose.foundation.layout.fillMaxSize
-          import androidx.compose.foundation.layout.padding
-          import androidx.compose.material3.Button
-          import androidx.compose.material3.MaterialTheme
-          import androidx.compose.material3.Text
-          import androidx.compose.ui.Modifier
-          import androidx.compose.ui.unit.dp
-          
-          class StartupGuardActivity : ComponentActivity() {
-              override fun onCreate(savedInstanceState: Bundle?) {
-                  super.onCreate(savedInstanceState)
-          
-                  val exitInfo = if (Build.VERSION.SDK_INT >= 30) {
-                      getSystemService(ActivityManager::class.java)
-                          ?.getHistoricalProcessExitReasons(packageName, 5, 0)
-                          ?.firstOrNull()
-                  } else null
-          
-                  val abnormal = exitInfo != null &&
-                      exitInfo.reason != ApplicationExitInfo.REASON_USER_REQUESTED &&
-                      exitInfo.reason != ApplicationExitInfo.REASON_UNKNOWN
-          
-                  if (!abnormal) {
-                      setContent { MaterialTheme { Text("Starting PersonalAI…") } }
-                      window.decorView.postDelayed({
-                          startActivity(Intent(this, PersonalAiHostActivity::class.java))
-                          finish()
-                      }, 250L)
-                      return
-                  }
-          
-                  val reason = when (exitInfo?.reason) {
-                      ApplicationExitInfo.REASON_CRASH -> "CRASH"
-                      ApplicationExitInfo.REASON_ANR -> "ANR"
-                      ApplicationExitInfo.REASON_LOW_MEMORY -> "LOW MEMORY"
-                      ApplicationExitInfo.REASON_SIGNALED -> "SIGNALED"
-                      else -> "EXIT ${exitInfo?.reason}"
-                  }
-          
-                  setContent {
-                      MaterialTheme {
-                          Column(
-                              Modifier.fillMaxSize().padding(24.dp),
-                              verticalArrangement = Arrangement.spacedBy(16.dp)
-                          ) {
-                              Text("PersonalAI startup recovery", style = MaterialTheme.typography.headlineSmall)
-                              Text("Previous session ended with: $reason")
-                              exitInfo?.description?.takeIf { it.isNotBlank() }?.let {
-                                  Text(it)
-                              }
-                              Button(onClick = {
-                                  startActivity(Intent(this@StartupGuardActivity, PersonalAiHostActivity::class.java))
-                                  finish()
-                              }) {
-                                  Text("Open PersonalAI")
-                              }
-                          }
-                      }
-                  }
-              }
-          }
-          """
-          write_new("app/src/main/java/com/personalai/mvp/app/StartupGuardActivity.kt", guard)
+
+import android.app.Activity
+import android.app.ActivityManager
+import android.app.ApplicationExitInfo
+import android.content.Intent
+import android.os.Build
+import android.os.Bundle
+import android.graphics.Color
+import android.view.Gravity
+import android.widget.Button
+import android.widget.LinearLayout
+import android.widget.TextView
+
+class StartupGuardActivity : Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        try {
+            val root = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(32, 32, 32, 32)
+                setBackgroundColor(Color.WHITE)
+            }
+            val title = TextView(this).apply {
+                text = "PersonalAI"
+                textSize = 28f
+                setTextColor(Color.BLACK)
+                gravity = Gravity.CENTER
+            }
+            val info = TextView(this).apply {
+                text = "Startup diagnostic"
+                textSize = 18f
+                setTextColor(Color.DKGRAY)
+                gravity = Gravity.CENTER
+                setPadding(0, 24, 0, 24)
+            }
+            val button = Button(this).apply {
+                text = "Open PersonalAI"
+                setOnClickListener {
+                    try {
+                        startActivity(Intent(this@StartupGuardActivity, PersonalAiHostActivity::class.java))
+                    } catch (t: Throwable) {
+                        info.text = "Host launch failed:\n" + t.stackTraceToString()
+                    }
+                }
+            }
+            val exitInfo = if (Build.VERSION.SDK_INT >= 30) {
+                getSystemService(ActivityManager::class.java)
+                    ?.getHistoricalProcessExitReasons(packageName, 5, 0)
+                    ?.firstOrNull()
+            } else null
+            val reason = when (exitInfo?.reason) {
+                ApplicationExitInfo.REASON_CRASH -> "Previous exit: CRASH"
+                ApplicationExitInfo.REASON_ANR -> "Previous exit: ANR"
+                ApplicationExitInfo.REASON_LOW_MEMORY -> "Previous exit: LOW MEMORY"
+                ApplicationExitInfo.REASON_SIGNALED -> "Previous exit: SIGNALED"
+                null -> "No previous exit recorded"
+                else -> "Previous exit code: " + exitInfo.reason
+            }
+            info.text = reason + if (!exitInfo?.description.isNullOrBlank()) {
+                "\n" + exitInfo!!.description
+            } else ""
+            root.addView(title)
+            root.addView(info)
+            root.addView(button)
+            setContentView(root)
+        } catch (t: Throwable) {
+            val fallback = TextView(this)
+            fallback.setTextColor(Color.BLACK)
+            fallback.textSize = 16f
+            fallback.setPadding(24, 24, 24, 24)
+            fallback.text = "PersonalAI guard error:\n" + t.stackTraceToString()
+            setContentView(fallback)
+        }
+    }
+}
+"""
+         write_new("app/src/main/java/com/personalai/mvp/app/StartupGuardActivity.kt", guard)
           
           manifest = file("AndroidManifest.xml")
           ms = manifest.read_text()
