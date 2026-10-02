@@ -769,18 +769,27 @@ jobs:
           marker = """                )
               }
           }
-          
-              private fun handleSelectedPdf"""
+      }
+
+    private fun handleSelectedPdf"""
           if marker not in hs:
-              raise SystemExit("Could not find PersonalAiHostActivity setContent closing marker")
+              marker = """                )
+            }
+        }
+    }
+
+    private fun handleSelectedPdf"""
+          if marker not in hs:
+              raise SystemExit("Could not find PersonalAiHostActivity closing marker")
           hs = hs.replace(
               marker,
               """                )
-                  }
-              }
-          }
-          
-              private fun handleSelectedPdf""",
+                }
+            }
+        }
+    }
+
+    private fun handleSelectedPdf""",
               1
           )
           host.write_text(hs)
