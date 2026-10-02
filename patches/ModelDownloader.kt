@@ -19,14 +19,14 @@ class ModelDownloader(
     private val importService: ModelImportService
 ) {
     companion object {
-        private const val MODEL_FILE = "Qwen2.5-0.5B-8da4w-2k.pte?download=true"
-        private const val TOKENIZER_FILE = "tokenizer.json?download=true"
+        private const val MODEL_FILE = "Qwen2.5-0.5B-8da4w-2k.pte"
+        private const val TOKENIZER_FILE = "tokenizer.json"
         private const val MODEL_ID = "qwen2.5-0.5b-xnnpack-8da4w-2k"
         private const val MODEL_VERSION = "3.0"
         private const val MODEL_URL =
-            "https://huggingface.co/experimentalmachines/Qwen2.5-0.5B-ExecuTorch/resolve/main/xnnpack/Qwen2.5-0.5B-8da4w-2k.pte"
+            "https://huggingface.co/experimentalmachines/Qwen2.5-0.5B-ExecuTorch/resolve/main/xnnpack/Qwen2.5-0.5B-8da4w-2k.pte?download=true"
         private const val TOKENIZER_URL =
-            "https://huggingface.co/experimentalmachines/Qwen2.5-0.5B-ExecuTorch/resolve/main/tokenizer.json"
+            "https://huggingface.co/experimentalmachines/Qwen2.5-0.5B-ExecuTorch/resolve/main/tokenizer.json?download=true"
         private const val MIN_FREE_BYTES = 850L * 1024L * 1024L
     }
 
