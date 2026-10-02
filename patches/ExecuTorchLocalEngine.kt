@@ -82,7 +82,7 @@ class ExecuTorchLocalEngine(
         try {
             generating.set(true)
             val config = LlmGenerationConfig.create()
-                .seqLen(512)
+                .seqLen(2048)
                 .maxNewTokens(64)
                 .temperature(0.7f)
                 .echo(false)
@@ -125,7 +125,7 @@ class ExecuTorchLocalEngine(
             try {
                 val m = loadModule()
                 val config = LlmGenerationConfig.create()
-                    .seqLen(512)
+                    .seqLen(2048)
                     .maxNewTokens(96)
                     .temperature(0.7f)
                     .echo(false)
