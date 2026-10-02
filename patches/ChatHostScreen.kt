@@ -17,18 +17,36 @@ import java.io.File
 private const val RUNTIME_MODEL = "SmolLM2-135M-Instruct-8da4w-2k.pte"
 private const val RUNTIME_TOKENIZER = "tokenizer.json"
 
+private fun findInstalledFile(root: File, exactName: String): File? =
+    if (!root.isDirectory) null else root.walkTopDown().maxDepth(5).firstOrNull {
+        it.isFile && it.name.equals(exactName, ignoreCase = true) && it.length() > 0L
+    }
+
 @Composable
 fun ChatHostScreen(modelReady: Boolean) {
     val context = LocalContext.current
-    val modelFile = remember { File(context.filesDir, "models/runtime/$RUNTIME_MODEL") }
-    val tokenizerFile = remember { File(context.filesDir, "models/runtime/$RUNTIME_TOKENIZER") }
-    val runtimeReady = modelFile.isFile && modelFile.length() > 0L &&
-        tokenizerFile.isFile && tokenizerFile.length() > 0L
-    val engine: LocalModelEngine = remember(runtimeReady, modelReady) {
-        ExecuTorchLocalEngine(modelFile, tokenizerFile)
+    val resolved = remember {
+        val root = File(context.filesDir, "models")
+        val model = findInstalledFile(root, RUNTIME_MODEL)
+            ?: File(root, "runtime/$RUNTIME_MODEL").takeIf { it.isFile && it.length() > 0L }
+        val tokenizer = findInstalledFile(root, RUNTIME_TOKENIZER)
+            ?: File(root, "runtime/$RUNTIME_TOKENIZER").takeIf { it.isFile && it.length() > 0L }
+        model to tokenizer
+    }
+    val modelFile = resolved.first
+    val tokenizerFile = resolved.second
+    val runtimeReady = modelFile?.isFile == true && modelFile.length() > 0L &&
+        tokenizerFile?.isFile == true && tokenizerFile.length() > 0L
+
+    val engine: LocalModelEngine = remember(runtimeReady, modelFile?.absolutePath, tokenizerFile?.absolutePath) {
+        if (runtimeReady) ExecuTorchLocalEngine(modelFile!!, tokenizerFile!!)
+        else ExecuTorchLocalEngine(
+            File(context.filesDir, "models/runtime/$RUNTIME_MODEL"),
+            File(context.filesDir, "models/runtime/$RUNTIME_TOKENIZER")
+        )
     }
     val index = remember { PersistentVectorIndex(context) }
-    val runtimeKey = if (runtimeReady) "smollm2-6" else "unavailable"
+    val runtimeKey = if (runtimeReady) "smollm2-installed" else "unavailable"
     val vm: ChatViewModel = viewModel(
         key = "chat-$runtimeKey",
         factory = ChatViewModelFactory(context, engine, index)
@@ -41,10 +59,13 @@ fun ChatHostScreen(modelReady: Boolean) {
     val sources by vm.lastSources.collectAsState()
     var input by remember { mutableStateOf("") }
 
+    val chatReady = runtimeReady && vm.modelReady
+
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("Personal AI", style = MaterialTheme.typography.headlineMedium)
         Text(
-            if (runtimeReady && vm.modelReady) "On-device model: SmolLM2 135M • XNNPACK 2K"
+            if (chatReady) "On-device model: SmolLM2 135M • XNNPACK 2K"
+            else if (runtimeReady) "Local model found. Initializing…"
             else "Install the recommended local model from Models."
         )
 
@@ -89,17 +110,17 @@ fun ChatHostScreen(modelReady: Boolean) {
             OutlinedTextField(
                 value = input,
                 onValueChange = { input = it },
-                enabled = !busy && runtimeReady && vm.modelReady,
+                enabled = !busy && chatReady,
                 modifier = Modifier.weight(1f),
                 placeholder = {
-                    Text(if (runtimeReady) "Talk to your local AI…" else "Download the local model first")
+                    Text(if (chatReady) "Talk to your local AI…" else "Preparing local model…")
                 }
             )
             if (busy) {
                 Button(onClick = vm::stopGeneration) { Text("Stop") }
             } else {
                 Button(
-                    enabled = runtimeReady && vm.modelReady && input.isNotBlank(),
+                    enabled = chatReady && input.isNotBlank(),
                     onClick = { vm.send(input); input = "" }
                 ) { Text("Send") }
             }
