@@ -19,8 +19,8 @@ class ModelDownloader(
     private val importService: ModelImportService
 ) {
     companion object {
-        private const val MODEL_FILE = "Qwen2.5-0.5B-8da4w-2k.pte"
-        private const val TOKENIZER_FILE = "tokenizer.json"
+        private const val MODEL_FILE = "Qwen2.5-0.5B-8da4w-2k.pte?download=true"
+        private const val TOKENIZER_FILE = "tokenizer.json?download=true"
         private const val MODEL_ID = "qwen2.5-0.5b-xnnpack-8da4w-2k"
         private const val MODEL_VERSION = "3.0"
         private const val MODEL_URL =
