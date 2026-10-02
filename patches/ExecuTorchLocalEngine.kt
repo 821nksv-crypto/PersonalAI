@@ -158,8 +158,10 @@ class ExecuTorchLocalEngine(
         val instruction = findLocalInstruction()
         val system = if (instruction.isNotBlank()) instruction
         else "You are a helpful AI assistant named SmolLM, trained by Hugging Face"
+        val legacyUser = prompt.substringAfter("\n\nUSER:\n", prompt)
+        val user = legacyUser.substringBeforeLast("\n\nASSISTANT:", legacyUser).trim()
         return "<|im_start|>system\\n" + system + "<|im_end|>\\n" +
-            "<|im_start|>user\\n" + prompt + "<|im_end|>\\n" +
+            "<|im_start|>user\\n" + user + "<|im_end|>\\n" +
             "<|im_start|>assistant\\n"
     }
 
