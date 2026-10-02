@@ -30,7 +30,7 @@ fun ModelImportScreen(
         ) {
             Text("Local AI Models", color = TextPrimary, style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Qwen3 0.6B • XNNPACK • 2K is recommended for phones. The model is downloaded only when you choose it, stored locally, and then runs offline.",
+                "Qwen2.5 0.5B • XNNPACK • 2K is the lightweight local model for phones. It is downloaded only when you choose it, stored locally, and then runs offline.",
                 color = TextSecondary,
                 style = MaterialTheme.typography.bodyMedium
             )
