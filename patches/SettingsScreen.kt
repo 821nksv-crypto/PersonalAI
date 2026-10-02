@@ -90,7 +90,7 @@ fun SettingsScreen(
 
             SettingsCard("Local model") {
                 Text(
-                    if (modelReady) "Qwen3 0.6B is installed and ready." else "No local model installed. Open Models to download one.",
+                    if (modelReady) "Qwen2.5 0.5B is installed and ready." else "No local model installed. Open Models to download one.",
                     color = if (modelReady) Color(0xFF36D987) else Color(0xFFFFB84D)
                 )
                 Text("Model storage: " + (storageBytes / (1024 * 1024)) + " MB", color = TextSecondary)
