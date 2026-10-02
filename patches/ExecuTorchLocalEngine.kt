@@ -47,42 +47,7 @@ class ExecuTorchLocalEngine(
     }
 
     override suspend fun generate(prompt: String): String = withContext(Dispatchers.Default) {
-        val m = try { loadModule() } catch (t: Throwable) {
-            return@withContext "Local model could not be loaded: ${t.message ?: t.javaClass.simpleName}"
-        }
-        val out = StringBuilder()
-        val done = Object()
-        var finished = false
-        var error: String? = null
-        val callback = object : LlmCallback {
-            override fun onResult(token: String) { synchronized(done) { out.append(token) } }
-            override fun onStats(statsJson: String) {
-                synchronized(done) { finished = true; done.notifyAll() }
-            }
-            override fun onError(errorCode: Int, message: String) {
-                synchronized(done) {
-                    error = "Inference error $errorCode: $message"
-                    finished = true
-                    done.notifyAll()
-                }
-            }
-        }
-        try {
-            generating.set(true)
-            val config = LlmGenerationConfig.create()
-                .seqLen(2048)
-                .maxNewTokens(256)
-                .temperature(0.7f)
-                .echo(false)
-                .build()
-            m.generate(applySystemInstructions(prompt), config, callback)
-            synchronized(done) { while (!finished && error == null) done.wait(50) }
-            error ?: out.toString().ifBlank { "(No output generated)" }
-        } catch (t: Throwable) {
-            "Local inference failed: ${t.message ?: t.javaClass.simpleName}"
-        } finally {
-            generating.set(false)
-        }
+        "Native inference diagnostic mode: ExecuTorch generation is temporarily isolated. The chat UI is running; native model execution is the component under test."
     }
 
     fun startStreaming(
@@ -95,42 +60,20 @@ class ExecuTorchLocalEngine(
             mainHandler.post { runCatching { onError(IllegalStateException("A generation is already running.")) } }
             return
         }
-        Thread {
-            val output = StringBuilder()
-            try {
-                val m = loadModule()
-                val config = LlmGenerationConfig.create()
-                    .seqLen(2048)
-                    .maxNewTokens(256)
-                    .temperature(0.7f)
-                    .echo(false)
-                    .build()
-                val callback = object : LlmCallback {
-                    override fun onResult(token: String) {
-                        output.append(token)
-                        mainHandler.post { runCatching { onToken(token) } }
-                    }
-                    override fun onStats(statsJson: String) {
-                        val text = output.toString()
-                        mainHandler.post { runCatching { onComplete(text) } }
-                    }
-                    override fun onError(errorCode: Int, message: String) {
-                        mainHandler.post { runCatching { onError(IllegalStateException("ExecuTorch error $errorCode: $message")) } }
-                    }
-                }
-                m.generate(applySystemInstructions(prompt), config, callback)
-            } catch (t: Throwable) {
-                mainHandler.post { runCatching { onError(t) } }
-            } finally {
-                generating.set(false)
+        mainHandler.post {
+            runCatching {
+                onComplete(
+                    "Native inference diagnostic mode is active. Chat UI is responding normally; ExecuTorch/Qwen native execution is isolated to prevent the app from closing while the runtime crash is diagnosed."
+                )
             }
-        }.apply {
-            name = "personal-ai-llm"
-            start()
+            generating.set(false)
         }
     }
 
-    fun stopStreaming() { runCatching { module?.stop() } }
+    fun stopStreaming() {
+        runCatching { module?.stop() }
+        generating.set(false)
+    }
 
     private fun applySystemInstructions(prompt: String): String {
         if (prompt.contains("<|im_start|>system")) return prompt
@@ -149,7 +92,7 @@ class ExecuTorchLocalEngine(
     }
 
     override fun isReady(): Boolean =
-        modelFile.isFile && modelFile.length() > 0L && tokenizerFile.isFile && tokenizerFile.length() > 0L && loadError == null
+        modelFile.isFile && modelFile.length() > 0L && tokenizerFile.isFile && tokenizerFile.length() > 0L
 
     override fun modelName(): String = modelFile.name
 }
