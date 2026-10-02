@@ -77,8 +77,8 @@ class ExecuTorchLocalEngine(
         try {
             generating.set(true)
             val config = LlmGenerationConfig.create()
-                .seqLen(512)
-                .maxNewTokens(96)
+                .seqLen(2048)
+                .maxNewTokens(64)
                 .temperature(0.7f)
                 .echo(false)
                 .build()
@@ -160,9 +160,9 @@ class ExecuTorchLocalEngine(
         else "You are a helpful AI assistant named SmolLM, trained by Hugging Face"
         val legacyUser = prompt.substringAfter("\n\nUSER:\n", prompt)
         val user = legacyUser.substringBeforeLast("\n\nASSISTANT:", legacyUser).trim()
-        return "<|im_start|>system\\n" + system + "<|im_end|>\\n" +
-            "<|im_start|>user\\n" + user + "<|im_end|>\\n" +
-            "<|im_start|>assistant\\n"
+        return "<|im_start|>system\n" + system + "<|im_end|>\n" +
+            "<|im_start|>user\n" + user + "<|im_end|>\n" +
+            "<|im_start|>assistant\n"
     }
 
     private fun findLocalInstruction(): String {
@@ -182,7 +182,7 @@ class ExecuTorchLocalEngine(
         require(modelFile.isFile && modelFile.canRead()) { "Local model file is missing or unreadable." }
         require(tokenizerFile.isFile && tokenizerFile.canRead()) { "Tokenizer file is missing or unreadable." }
         require(modelFile.length() <= 700L * 1024L * 1024L) {
-            "This model is too large for the lightweight PersonalAI profile. Install Qwen2.5 0.5B XNNPACK 2K."
+            "This model is too large for the lightweight PersonalAI profile. Install the SmolLM2 135M XNNPACK 2K model."
         }
         require(tokenizerFile.length() <= 20L * 1024L * 1024L) {
             "Tokenizer file is invalid or too large."
