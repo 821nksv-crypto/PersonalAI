@@ -748,6 +748,44 @@ jobs:
               print(manifest_debug.read_text(errors="replace"))
           print("===== END STARTUP HOST DIAGNOSTIC =====")
           
+          # Defer AppRuntime construction until after the first Compose frame.
+          host = file("PersonalAiHostActivity.kt")
+          hs = host.read_text()
+          hs = hs.replace("        runtime = AppRuntime(this)\n", "")
+          hs = hs.replace(
+              """                val coordinator = runtime.coordinator
+          """,
+              """                if (!::runtime.isInitialized) {
+                      LaunchedEffect(Unit) {
+                          delay(300)
+                          runCatching { runtime = AppRuntime(this@PersonalAiHostActivity) }
+                      }
+                      androidx.compose.material3.Text("Starting PersonalAI…")
+                  } else {
+                      val coordinator = runtime.coordinator
+          """,
+              1
+          )
+          marker = """                )
+              }
+          }
+          
+              private fun handleSelectedPdf"""
+          if marker not in hs:
+              raise SystemExit("Could not find PersonalAiHostActivity setContent closing marker")
+          hs = hs.replace(
+              marker,
+              """                )
+                  }
+              }
+          }
+          
+              private fun handleSelectedPdf""",
+              1
+          )
+          host.write_text(hs)
+          print("Deferred AppRuntime initialization until after first UI frame.")
+          
           print("===== DOCUMENT SUMMARY DIAGNOSTIC =====")
           for fp in root.rglob("*.kt"):
               name = fp.name.lower()
