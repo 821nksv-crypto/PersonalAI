@@ -788,13 +788,10 @@ jobs:
                   print(f"===== FILE {fp} =====")
                   print(fp.read_text(errors="replace"))
           print("===== END DOCUMENT SUMMARY DIAGNOSTIC =====")
-          # Startup guard: show the previous process-exit reason after an abnormal exit.
+          # Diagnostic guard: keep the launcher alive in a separate process and require a manual host launch.
           guard = """package com.personalai.mvp.app
           
-          import android.app.ActivityManager
-          import android.app.ApplicationExitInfo
           import android.content.Intent
-          import android.os.Build
           import android.os.Bundle
           import androidx.activity.ComponentActivity
           import androidx.activity.compose.setContent
@@ -811,49 +808,19 @@ jobs:
           class StartupGuardActivity : ComponentActivity() {
               override fun onCreate(savedInstanceState: Bundle?) {
                   super.onCreate(savedInstanceState)
-          
-                  val exitInfo = if (Build.VERSION.SDK_INT >= 30) {
-                      getSystemService(ActivityManager::class.java)
-                          ?.getHistoricalProcessExitReasons(packageName, 5, 0)
-                          ?.firstOrNull()
-                  } else null
-          
-                  val abnormal = exitInfo != null &&
-                      exitInfo.reason != ApplicationExitInfo.REASON_USER_REQUESTED &&
-                      exitInfo.reason != ApplicationExitInfo.REASON_UNKNOWN
-          
-                  if (!abnormal) {
-                      setContent { MaterialTheme { Text("Starting PersonalAI…") } }
-                      window.decorView.postDelayed({
-                          startActivity(Intent(this, PersonalAiHostActivity::class.java))
-                      }, 250L)
-                      return
-                  }
-          
-                  val reason = when (exitInfo?.reason) {
-                      ApplicationExitInfo.REASON_CRASH -> "CRASH"
-                      ApplicationExitInfo.REASON_ANR -> "ANR"
-                      ApplicationExitInfo.REASON_LOW_MEMORY -> "LOW MEMORY"
-                      ApplicationExitInfo.REASON_SIGNALED -> "SIGNALED"
-                      else -> "EXIT ${exitInfo?.reason}"
-                  }
-          
                   setContent {
                       MaterialTheme {
                           Column(
                               Modifier.fillMaxSize().padding(24.dp),
                               verticalArrangement = Arrangement.spacedBy(16.dp)
                           ) {
-                              Text("PersonalAI startup recovery", style = MaterialTheme.typography.headlineSmall)
-                              Text("Previous session ended with: $reason")
-                              exitInfo?.description?.takeIf { it.isNotBlank() }?.let {
-                                  Text(it)
-                              }
+                              Text("PersonalAI diagnostic launcher", style = MaterialTheme.typography.headlineSmall)
+                              Text("Startup guard is running in a separate process. The main app will NOT start automatically.")
+                              Text("If this screen stays open, the launcher process is healthy. Use the button below to test the main process.")
                               Button(onClick = {
                                   startActivity(Intent(this@StartupGuardActivity, PersonalAiHostActivity::class.java))
-                                  finish()
                               }) {
-                                  Text("Open PersonalAI")
+                                  Text("Start main app")
                               }
                           }
                       }
@@ -861,12 +828,6 @@ jobs:
               }
           }
           """
-          write_new("app/src/main/java/com/personalai/mvp/app/StartupGuardActivity.kt", guard)
-          
-          manifest = file("AndroidManifest.xml")
-          ms = manifest.read_text()
-          ms = ms.replace('android:name=".app.StartupGuardActivity" android:exported="true" android:process=":guard"', 'android:name=".app.StartupGuardActivity" android:exported="true"', 1)
-          manifest.write_text(ms)
           print("Installed startup crash guard.")
           
           print("Source compatibility patches applied.")
