@@ -756,6 +756,7 @@ jobs:
           cp "$GITHUB_WORKSPACE/patches/ModelImportScreen.kt" "$P/app/src/main/java/com/personalai/mvp/importer/ModelImportScreen.kt"
           mkdir -p "$P/app/src/main/java/com/personalai/mvp/ai"
           cp "$GITHUB_WORKSPACE/patches/ExecuTorchLocalEngine.kt" "$P/app/src/main/java/com/personalai/mvp/ai/ExecuTorchLocalEngine.kt"
+          cp "$GITHUB_WORKSPACE/patches/ChatHostScreen.kt" "$P/app/src/main/java/com/personalai/mvp/chat/ChatHostScreen.kt"
           MANIFEST="$P/app/src/main/AndroidManifest.xml"
           python3 - "$MANIFEST" <<'PY'
           import sys
@@ -773,7 +774,7 @@ jobs:
           PY
           rm -rf "$P/app/src/main/assets/models"
           mkdir -p "$P/app/src/main/assets/models"
-          echo "No model bundled: Qwen2.5 0.5B downloads on demand from the Models screen."
+          echo "No model bundled: SmolLM2-135M-Instruct downloads on demand from the Models screen."
           echo "PROJ=$P" >> "$GITHUB_ENV"
 
       - uses: actions/setup-java@v4
