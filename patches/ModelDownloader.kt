@@ -22,11 +22,11 @@ class ModelDownloader(
         private const val MODEL_FILE = "SmolLM2-135M-Instruct-8da4w-2k.pte"
         private const val TOKENIZER_FILE = "tokenizer.json"
         private const val MODEL_ID = "smollm2-135m-instruct-xnnpack-8da4w-2k"
-        private const val MODEL_VERSION = "6.0"
+        private const val MODEL_VERSION = "7.0"
         private const val MODEL_URL =
-            "https://huggingface.co/experimentalmachines/SmolLM2-135M-Instruct-ExecuTorch/resolve/main/xnnpack/SmolLM2-135M-Instruct-8da4w-2k.pte"
+            "https://huggingface.co/experimentalmachines/SmolLM2-135M-Instruct-ExecuTorch/resolve/main/xnnpack/SmolLM2-135M-Instruct-8da4w-2k.pte?download=true"
         private const val TOKENIZER_URL =
-            "https://huggingface.co/experimentalmachines/SmolLM2-135M-Instruct-ExecuTorch/resolve/main/tokenizer.json"
+            "https://huggingface.co/experimentalmachines/SmolLM2-135M-Instruct-ExecuTorch/resolve/main/tokenizer.json?download=true"
         private const val MIN_FREE_BYTES = 850L * 1024L * 1024L
     }
 
@@ -40,6 +40,7 @@ class ModelDownloader(
         require(free > MIN_FREE_BYTES) {
             "Not enough free storage. Keep at least 850 MB free before downloading the local model."
         }
+
         try {
             downloadToFile(MODEL_URL, model, onProgress)
             downloadToFile(TOKENIZER_URL, tokenizer) { done, total -> onProgress(done, total) }
@@ -57,15 +58,13 @@ class ModelDownloader(
                 .put("sha256", sha256Streaming(model))
                 .put("tokenizerFileName", TOKENIZER_FILE)
                 .put("tokenizerSha256", sha256Streaming(tokenizer))
-            val manifestFile = File(modelsDir, "qwen2.5-0.5b-manifest.json")
+
+            val manifestFile = File(modelsDir, "smollm2-135m-manifest.json")
             manifestFile.writeText(manifest.toString())
 
             val pair = SelectedModelPair(UUID.randomUUID().toString(), model, manifestFile, tokenizer)
             when (val result = importService.verifyAndInstall(pair)) {
                 is ImportResult.Success -> {
-                    val runtimeDir = File(context.filesDir, "models/runtime").apply { mkdirs() }
-                    model.copyTo(File(runtimeDir, MODEL_FILE), overwrite = true)
-                    tokenizer.copyTo(File(runtimeDir, TOKENIZER_FILE), overwrite = true)
                     model.delete()
                     tokenizer.delete()
                     manifestFile.delete()
@@ -77,7 +76,7 @@ class ModelDownloader(
         } catch (t: Throwable) {
             model.delete()
             tokenizer.delete()
-            File(modelsDir, "qwen2.5-0.5b-manifest.json").delete()
+            File(modelsDir, "smollm2-135m-manifest.json").delete()
             throw t
         }
     }
@@ -87,42 +86,76 @@ class ModelDownloader(
         destination: File,
         onProgress: (Long, Long) -> Unit = { _, _ -> }
     ) {
-        val partial = File(destination.parentFile, destination.name + ".part")
-        partial.delete()
-        val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-            connectTimeout = 20_000
-            readTimeout = 60_000
-            instanceFollowRedirects = true
-            requestMethod = "GET"
-            setRequestProperty("Accept", "*/*")
-            setRequestProperty("User-Agent", "PersonalAI/1.0 (Android; ExecuTorch)")
-            connect()
-        }
-        try {
-            val code = connection.responseCode
-            require(code in 200..299) { "Model server returned HTTP $code" }
-            val total = connection.contentLengthLong
-            connection.inputStream.use { input ->
-                FileOutputStream(partial).use { output ->
-                    val buffer = ByteArray(1024 * 1024)
-                    var done = 0L
-                    while (true) {
-                        val n = input.read(buffer)
-                        if (n < 0) break
-                        output.write(buffer, 0, n)
-                        done += n
-                        onProgress(done, total)
-                    }
-                    output.fd.sync()
-                }
-            }
-            require(partial.length() > 0L) { "Downloaded file is empty." }
-            if (destination.exists()) destination.delete()
-            check(partial.renameTo(destination)) { "Could not finalize downloaded model file." }
-        } finally {
-            connection.disconnect()
+        var lastCode = -1
+        var lastMessage = ""
+        repeat(3) { attempt ->
+            val partial = File(destination.parentFile, destination.name + ".part")
             partial.delete()
+            val connection = (URL(url).openConnection() as HttpURLConnection).apply {
+                connectTimeout = 25_000
+                readTimeout = 90_000
+                instanceFollowRedirects = true
+                requestMethod = "GET"
+                setRequestProperty("Accept", "*/*")
+                setRequestProperty("Accept-Encoding", "identity")
+                setRequestProperty("Cache-Control", "no-cache")
+                setRequestProperty("Connection", "close")
+                setRequestProperty(
+                    "User-Agent",
+                    "PersonalAI/1.0 Android; ExecuTorch 1.4.0"
+                )
+            }
+
+            try {
+                connection.connect()
+                val code = connection.responseCode
+                lastCode = code
+                lastMessage = connection.responseMessage ?: ""
+                if (code !in 200..299) {
+                    if (code == 401 || code == 403 || code == 429 || code >= 500) {
+                        if (attempt < 2) {
+                            Thread.sleep((1000L shl attempt))
+                            return@repeat
+                        }
+                    }
+                    throw IllegalStateException(
+                        "Model download failed: HTTP $code $lastMessage. " +
+                            "Hugging Face returned an authorization/CDN response; " +
+                            "the model itself is public."
+                    )
+                }
+
+                val total = connection.contentLengthLong
+                connection.inputStream.use { input ->
+                    FileOutputStream(partial).use { output ->
+                        val buffer = ByteArray(1024 * 1024)
+                        var done = 0L
+                        while (true) {
+                            val n = input.read(buffer)
+                            if (n < 0) break
+                            output.write(buffer, 0, n)
+                            done += n
+                            onProgress(done, total)
+                        }
+                        output.fd.sync()
+                    }
+                }
+
+                require(partial.length() > 0L) { "Downloaded file is empty." }
+                if (destination.exists()) destination.delete()
+                check(partial.renameTo(destination)) {
+                    "Could not finalize downloaded model file."
+                }
+                return
+            } finally {
+                connection.disconnect()
+                partial.delete()
+            }
         }
+
+        throw IllegalStateException(
+            "Model download failed after retries: HTTP $lastCode $lastMessage."
+        )
     }
 
     private fun sha256Streaming(file: File): String {
