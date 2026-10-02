@@ -899,3 +899,4 @@ jobs:
         with:
           name: personalai-debug-apk
           path: ${{ env.PROJ }}/app/build/outputs/apk/debug/*.apk
+# chat-only build pipeline active
