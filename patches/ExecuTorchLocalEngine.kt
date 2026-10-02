@@ -83,11 +83,10 @@ class ExecuTorchLocalEngine(
                 .echo(false)
                 .warming(false)
                 .build()
-            m.generate(applySystemInstructions(prompt), config, callback)
-            synchronized(done) {
-                while (!finished && error == null) done.wait(50)
-            }
-            error ?: out.toString().ifBlank { "(No output generated)" }
+            // DIAGNOSTIC STEP: verify native model loading without entering the
+            // XNNPACK generation kernel. The current APK exits during inference,
+            // so isolate load() from generate() before changing the model/backend.
+            "Diagnostic: local model loaded successfully. Inference call is temporarily isolated."
         } catch (t: Throwable) {
             "Local inference failed: " + (t.message ?: t.javaClass.simpleName)
         } finally {
