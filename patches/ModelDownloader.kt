@@ -19,14 +19,14 @@ class ModelDownloader(
     private val importService: ModelImportService
 ) {
     companion object {
-        private const val MODEL_FILE = "Qwen3-0.6B-8da4w-2k.pte"
+        private const val MODEL_FILE = "Qwen2.5-0.5B-8da4w-2k.pte"
         private const val TOKENIZER_FILE = "tokenizer.json"
-        private const val MODEL_ID = "qwen3-0.6b-xnnpack-8da4w-2k"
-        private const val MODEL_VERSION = "2.0"
+        private const val MODEL_ID = "qwen2.5-0.5b-xnnpack-8da4w-2k"
+        private const val MODEL_VERSION = "3.0"
         private const val MODEL_URL =
-            "https://huggingface.co/experimentalmachines/Qwen3-0.6B-ExecuTorch/resolve/main/xnnpack/Qwen3-0.6B-8da4w-2k.pte"
+            "https://huggingface.co/experimentalmachines/Qwen2.5-0.5B-ExecuTorch/resolve/main/xnnpack/Qwen2.5-0.5B-8da4w-2k.pte"
         private const val TOKENIZER_URL =
-            "https://huggingface.co/experimentalmachines/Qwen3-0.6B-ExecuTorch/resolve/main/tokenizer.json"
+            "https://huggingface.co/experimentalmachines/Qwen2.5-0.5B-ExecuTorch/resolve/main/tokenizer.json"
         private const val MIN_FREE_BYTES = 850L * 1024L * 1024L
     }
 
@@ -48,7 +48,7 @@ class ModelDownloader(
 
             val manifest = JSONObject()
                 .put("id", MODEL_ID)
-                .put("displayName", "Qwen3 0.6B • XNNPACK 2K")
+                .put("displayName", "Qwen2.5 0.5B • XNNPACK 2K")
                 .put("version", MODEL_VERSION)
                 .put("runtime", "executorch")
                 .put("architecture", "arm64-v8a")
@@ -57,7 +57,7 @@ class ModelDownloader(
                 .put("sha256", sha256Streaming(model))
                 .put("tokenizerFileName", TOKENIZER_FILE)
                 .put("tokenizerSha256", sha256Streaming(tokenizer))
-            val manifestFile = File(modelsDir, "qwen3-0.6b-manifest.json")
+            val manifestFile = File(modelsDir, "qwen2.5-0.5b-manifest.json")
             manifestFile.writeText(manifest.toString())
 
             val pair = SelectedModelPair(UUID.randomUUID().toString(), model, manifestFile, tokenizer)
@@ -66,7 +66,7 @@ class ModelDownloader(
                     model.delete()
                     tokenizer.delete()
                     manifestFile.delete()
-                    "Qwen3 0.6B installed. Restarting local AI engine…"
+                    "Qwen2.5 0.5B installed. Restarting local AI engine…"
                 }
                 is ImportResult.Failure -> throw IllegalStateException(result.message)
                 is ImportResult.Cancelled -> throw IllegalStateException("Model installation cancelled.")
@@ -74,7 +74,7 @@ class ModelDownloader(
         } catch (t: Throwable) {
             model.delete()
             tokenizer.delete()
-            File(modelsDir, "qwen3-0.6b-manifest.json").delete()
+            File(modelsDir, "qwen2.5-0.5b-manifest.json").delete()
             throw t
         }
     }
