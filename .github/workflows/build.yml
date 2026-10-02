@@ -866,6 +866,8 @@ jobs:
           # Minimal bootable/chat-only phase:
           # Do not construct AppRuntime, RAG, documents, schedulers, settings, or model services at startup.
           # The only active feature is a chat screen; the local ExecuTorch model is loaded only after Send.
+          python3 <<'PYCHAT'
+          import re
           from pathlib import Path
           root = next(p.parent for p in Path("src").rglob("settings.gradle.kts"))
           host = root / "app/src/main/java/com/personalai/mvp/app/PersonalAiHostActivity.kt"
@@ -876,6 +878,7 @@ jobs:
           ms = ms.replace('android:process=":guard"', '')
           manifest.write_text(ms)
           print("Installed minimal chat-only startup.")
+          PYCHAT
 
           echo "PROJ=$P" >> "$GITHUB_ENV"
 
