@@ -646,7 +646,7 @@ jobs:
                   ) {
                       Text("Local model required", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                       Text(
-                          "Download Qwen3 0.6B once. After installation, chat runs locally on the phone.",
+                          "Download Qwen2.5 0.5B once. After installation, chat runs locally on the phone.",
                           color = OfflineMuted,
                           textAlign = TextAlign.Center
                       )
@@ -902,7 +902,7 @@ jobs:
           PY
           rm -rf "$P/app/src/main/assets/models"
           mkdir -p "$P/app/src/main/assets/models"
-          echo "No model bundled: Qwen3 0.6B downloads on demand from the Models screen."
+          echo "No model bundled: Qwen2.5 0.5B downloads on demand from the Models screen."
           echo "PROJ=$P" >> "$GITHUB_ENV"
 
       - uses: actions/setup-java@v4
