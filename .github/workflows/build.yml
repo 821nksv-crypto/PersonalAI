@@ -66,7 +66,7 @@ jobs:
               if p.is_file() and p.suffix in {".gradle", ".kts", ".toml"}:
                   s = p.read_text()
                   ns = s.replace("org.pytorch:executorch-android:1.5.0",
-                                 "org.pytorch:executorch-android:1.4.1")
+                                 "org.pytorch:executorch-android:1.4.0")
                   if ns != s:
                       p.write_text(ns)
           
