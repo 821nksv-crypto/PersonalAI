@@ -19,14 +19,14 @@ class ModelDownloader(
     private val importService: ModelImportService
 ) {
     companion object {
-        private const val MODEL_FILE = "Qwen2.5-0.5B-8da4w-2k.pte"
+        private const val MODEL_FILE = "SmolLM2-135M-Instruct-8da4w-2k.pte"
         private const val TOKENIZER_FILE = "tokenizer.json"
-        private const val MODEL_ID = "qwen2.5-0.5b-xnnpack-8da4w-2k"
-        private const val MODEL_VERSION = "5.0"
+        private const val MODEL_ID = "smollm2-135m-instruct-xnnpack-8da4w-2k"
+        private const val MODEL_VERSION = "6.0"
         private const val MODEL_URL =
-            "https://huggingface.co/experimentalmachines/Qwen2.5-0.5B-ExecuTorch/resolve/main/xnnpack/Qwen2.5-0.5B-8da4w-2k.pte"
+            "https://huggingface.co/experimentalmachines/SmolLM2-135M-Instruct-ExecuTorch/resolve/main/xnnpack/SmolLM2-135M-Instruct-8da4w-2k.pte"
         private const val TOKENIZER_URL =
-            "https://huggingface.co/experimentalmachines/Qwen2.5-0.5B-ExecuTorch/resolve/main/tokenizer.json"
+            "https://huggingface.co/experimentalmachines/SmolLM2-135M-Instruct-ExecuTorch/resolve/main/tokenizer.json"
         private const val MIN_FREE_BYTES = 850L * 1024L * 1024L
     }
 
@@ -48,7 +48,7 @@ class ModelDownloader(
 
             val manifest = JSONObject()
                 .put("id", MODEL_ID)
-                .put("displayName", "Qwen2.5 0.5B • XNNPACK 2K")
+                .put("displayName", "SmolLM2-135M-Instruct • XNNPACK 2K")
                 .put("version", MODEL_VERSION)
                 .put("runtime", "executorch")
                 .put("architecture", "arm64-v8a")
@@ -63,10 +63,13 @@ class ModelDownloader(
             val pair = SelectedModelPair(UUID.randomUUID().toString(), model, manifestFile, tokenizer)
             when (val result = importService.verifyAndInstall(pair)) {
                 is ImportResult.Success -> {
+                    val runtimeDir = File(context.filesDir, "models/runtime").apply { mkdirs() }
+                    model.copyTo(File(runtimeDir, MODEL_FILE), overwrite = true)
+                    tokenizer.copyTo(File(runtimeDir, TOKENIZER_FILE), overwrite = true)
                     model.delete()
                     tokenizer.delete()
                     manifestFile.delete()
-                    "Qwen2.5 0.5B • ExecuTorch 1.4.0 • XNNPACK 2K installed. Restarting local AI engine…"
+                    "SmolLM2-135M-Instruct • ExecuTorch 1.4.0 • XNNPACK 2K installed. Restarting local AI engine…"
                 }
                 is ImportResult.Failure -> throw IllegalStateException(result.message)
                 is ImportResult.Cancelled -> throw IllegalStateException("Model installation cancelled.")
