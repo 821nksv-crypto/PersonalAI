@@ -762,6 +762,34 @@ jobs:
                   }
 
                   setContent {""")
+          # Startup isolation: keep Compose-time constructor failures visible instead of killing the process.
+          replace("PersonalAiHostActivity.kt",
+                  "import androidx.compose.material3.MaterialTheme",
+                  "import androidx.compose.material3.MaterialTheme\\nimport androidx.compose.material3.Text")
+          replace("PersonalAiHostActivity.kt",
+                  """        setContent {
+            MaterialTheme {""",
+                  """        setContent {
+            try {
+                MaterialTheme {""")
+          replace("PersonalAiHostActivity.kt",
+                  """                )
+            }
+        }
+    }
+
+    private fun handleSelectedPdf""",
+                  """                )
+                }
+            } catch (t: Throwable) {
+                MaterialTheme {
+                    Text("PersonalAI startup error:\\n${t.stackTraceToString()}")
+                }
+            }
+        }
+    }
+
+    private fun handleSelectedPdf""")
           print("===== TARGET STARTUP SOURCES =====")
           for target in ("AppStateRepository.kt", "ModelLibraryController.kt", "PersonalAiHostActivity.kt"):
               for fp in root.rglob(target):
