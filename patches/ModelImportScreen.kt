@@ -40,7 +40,7 @@ fun ModelImportScreen(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Accent, contentColor = Color.White)
             ) {
-                Text(if (downloading) "Downloading model…" else "Download Qwen3 0.6B")
+                Text(if (downloading) "Downloading model…" else "Download Qwen2.5 0.5B")
             }
             if (downloading) {
                 LinearProgressIndicator(
