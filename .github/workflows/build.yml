@@ -762,6 +762,13 @@ jobs:
                   }
 
                   setContent {""")
+          print("===== TARGET STARTUP SOURCES =====")
+          for target in ("AppStateRepository.kt", "ModelLibraryController.kt", "PersonalAiHostActivity.kt"):
+              for fp in root.rglob(target):
+                  print(f"===== TARGET FILE {fp} =====")
+                  print(fp.read_text(errors="replace"))
+          print("===== END TARGET STARTUP SOURCES =====")
+
           print("===== APP COORDINATOR DIAGNOSTIC =====")
           for fp in root.rglob("*.kt"):
               if fp.name == "AppCoordinator.kt":
