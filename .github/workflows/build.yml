@@ -752,50 +752,31 @@ jobs:
           host = file("PersonalAiHostActivity.kt")
           hs = host.read_text()
           hs = hs.replace("        runtime = AppRuntime(this)\n", "")
-          hs = hs.replace(
-              """                val coordinator = runtime.coordinator
-          """,
-              """                if (!::runtime.isInitialized) {
-                      LaunchedEffect(Unit) {
-                          delay(300)
-                          runCatching { runtime = AppRuntime(this@PersonalAiHostActivity) }
-                      }
-                      androidx.compose.material3.Text("Starting PersonalAI…")
-                  } else {
-                      val coordinator = runtime.coordinator
-          """,
-              1
-          )
-          marker = """                )
-              }
-          }
-      }
-
-    private fun handleSelectedPdf"""
-          if marker not in hs:
-              marker = """                )
-            }
-        }
-    }
-
-    private fun handleSelectedPdf"""
-          if marker not in hs:
-              raise SystemExit("Could not find PersonalAiHostActivity closing marker")
-          hs = hs.replace(
-              marker,
-              """                )
-                }
-            }
-        }
-    }
-
-    private fun handleSelectedPdf""",
-              1
-          )
+          old = "                val coordinator = runtime.coordinator\n"
+          new = """                if (!::runtime.isInitialized) {
+                              LaunchedEffect(Unit) {
+                                  delay(300)
+                                  runCatching { runtime = AppRuntime(this@PersonalAiHostActivity) }
+                              }
+                              androidx.compose.material3.Text("Starting PersonalAI…")
+                          } else {
+                              val coordinator = runtime.coordinator
+          """
+          hs = hs.replace(old, new, 1)
+          needle = "\n    private fun handleSelectedPdf"
+          pos = hs.find(needle)
+          if pos < 0:
+              raise SystemExit("Could not find handleSelectedPdf")
+          prefix = hs[:pos]
+          close = "\n        }\n    }\n"
+          close_pos = prefix.rfind(close)
+          if close_pos < 0:
+              raise SystemExit("Could not find setContent closing braces")
+          hs = prefix[:close_pos] + "\n                }" + prefix[close_pos:] + hs[pos:]
           host.write_text(hs)
           print("Deferred AppRuntime initialization until after first UI frame.")
-          
-          print("===== DOCUMENT SUMMARY DIAGNOSTIC =====")
+                    
+                    print("===== DOCUMENT SUMMARY DIAGNOSTIC =====")
           for fp in root.rglob("*.kt"):
               name = fp.name.lower()
               if any(k in name for k in ("document", "chat", "summary", "rag")):
