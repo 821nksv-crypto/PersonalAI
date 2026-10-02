@@ -22,11 +22,11 @@ class ModelDownloader(
         private const val MODEL_FILE = "Qwen2.5-0.5B-8da4w-2k.pte"
         private const val TOKENIZER_FILE = "tokenizer.json"
         private const val MODEL_ID = "qwen2.5-0.5b-xnnpack-8da4w-2k"
-        private const val MODEL_VERSION = "3.0"
+        private const val MODEL_VERSION = "4.0"
         private const val MODEL_URL =
-            "https://huggingface.co/experimentalmachines/Qwen2.5-0.5B-ExecuTorch/resolve/main/xnnpack/Qwen2.5-0.5B-8da4w-2k.pte?download=true"
+            "https://huggingface.co/software-mansion/react-native-executorch-qwen-2.5/resolve/v0.9.0/0_5b/xnnpack/qwen_2_5_0_5b_xnnpack_8da4w.pte"
         private const val TOKENIZER_URL =
-            "https://huggingface.co/experimentalmachines/Qwen2.5-0.5B-ExecuTorch/resolve/main/tokenizer.json?download=true"
+            "https://huggingface.co/software-mansion/react-native-executorch-qwen-2.5/resolve/v0.9.0/tokenizer.json"
         private const val MIN_FREE_BYTES = 850L * 1024L * 1024L
     }
 
@@ -92,6 +92,7 @@ class ModelDownloader(
             instanceFollowRedirects = true
             requestMethod = "GET"
             setRequestProperty("Accept", "*/*")
+            setRequestProperty("User-Agent", "PersonalAI/1.0 (Android; ExecuTorch)")
             connect()
         }
         try {
