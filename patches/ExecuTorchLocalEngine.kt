@@ -32,13 +32,10 @@ class ExecuTorchLocalEngine(
                     .tokenizerPath(tokenizerFile.absolutePath)
                     .temperature(0.7f)
                     .modelType(LlmModuleConfig.MODEL_TYPE_TEXT)
-                    .loadMode(LlmModuleConfig.LOAD_MODE_MMAP)
+                    .loadMode(LlmModuleConfig.LOAD_MODE_FILE)
                     .build()
                 val loaded = LlmModule(config)
-                val status = loaded.load()
-                if (status != 0) {
-                    throw IllegalStateException("ExecuTorch model load failed with status $status")
-                }
+                loaded.load()
                 module = loaded
                 loadError = null
                 return loaded
@@ -80,7 +77,7 @@ class ExecuTorchLocalEngine(
         try {
             generating.set(true)
             val config = LlmGenerationConfig.create()
-                .seqLen(2048)
+                .seqLen(512)
                 .maxNewTokens(64)
                 .temperature(0.7f)
                 .echo(false)
