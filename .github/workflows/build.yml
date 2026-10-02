@@ -529,227 +529,98 @@ jobs:
               onNavigate: (AppScreen) -> Unit,
               chatContent: @Composable () -> Unit
           ) {
-              var showChat by rememberSaveable { mutableStateOf(false) }
-          
-              if (showChat) {
-                  Surface(modifier = Modifier.fillMaxSize(), color = OfflineBg) {
-                      Column(Modifier.fillMaxSize()) {
-                          ChatHeader(onBack = { showChat = false })
-                          Box(Modifier.weight(1f).fillMaxWidth()) {
-                              OfflineTheme {
-                                  chatContent()
-                              }
-                          }
-                      }
-                  }
-              } else {
-                  Surface(modifier = Modifier.fillMaxSize(), color = OfflineBg) {
-                      LazyColumn(
-                          modifier = Modifier.fillMaxSize(),
-                          contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 24.dp),
-                          verticalArrangement = Arrangement.spacedBy(14.dp)
+              Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF7F9FC)) {
+                  Column(Modifier.fillMaxSize()) {
+                      ChatHeader(
+                          onMenu = { onNavigate(AppScreen.DOCUMENTS) },
+                          onSettings = { onNavigate(AppScreen.SETTINGS) }
+                      )
+                      Box(
+                          Modifier
+                              .weight(1f)
+                              .fillMaxWidth()
+                              .background(Color(0xFFF7F9FC))
                       ) {
-                          item {
-                              Row(
-                                  modifier = Modifier.fillMaxWidth(),
-                                  horizontalArrangement = Arrangement.SpaceBetween,
-                                  verticalAlignment = Alignment.CenterVertically
-                              ) {
-                                  Text(
-                                      "☰",
-                                      color = Color.White,
-                                      fontSize = 31.sp,
-                                      modifier = Modifier.clickable { onNavigate(AppScreen.DOCUMENTS) }
-                                  )
-                                  Text(
-                                      "⚙",
-                                      color = Color.White,
-                                      fontSize = 29.sp,
-                                      modifier = Modifier.clickable { onNavigate(AppScreen.SETTINGS) }
-                                  )
-                              }
-                          }
-          
-                          item { HeroBrand() }
-          
-                          item {
-                              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                  FeatureCard(
-                                      modifier = Modifier.weight(1f),
-                                      icon = "○",
-                                      iconBrush = Brush.horizontalGradient(listOf(Color(0xFF6888FF), Color(0xFF6D4CFF))),
-                                      title = "Start Chat",
-                                      subtitle = "Ask anything",
-                                      onClick = { showChat = true }
-                                  )
-                                  FeatureCard(
-                                      modifier = Modifier.weight(1f),
-                                      icon = "▤",
-                                      iconBrush = Brush.horizontalGradient(listOf(Color(0xFF45A9FF), Color(0xFF5B7BFF))),
-                                      title = "Documents",
-                                      subtitle = "PDF & Notes",
-                                      onClick = { onNavigate(AppScreen.DOCUMENTS) }
-                                  )
-                              }
-                          }
-          
-                          item {
-                              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                  FeatureCard(
-                                      modifier = Modifier.weight(1f),
-                                      icon = "▧",
-                                      iconBrush = Brush.horizontalGradient(listOf(Color(0xFF43E59A), Color(0xFF36B8B0))),
-                                      title = "Analyze Image",
-                                      subtitle = "Understand photos",
-                                      onClick = { showChat = true }
-                                  )
-                                  FeatureCard(
-                                      modifier = Modifier.weight(1f),
-                                      icon = "◇",
-                                      iconBrush = Brush.horizontalGradient(listOf(Color(0xFFFFE06A), Color(0xFFFFB52E))),
-                                      title = "Ideas",
-                                      subtitle = "Brainstorm & Plan",
-                                      onClick = { showChat = true }
-                                  )
-                              }
-                          }
-          
-                          item {
-                              Row(
-                                  Modifier.fillMaxWidth(),
-                                  verticalAlignment = Alignment.CenterVertically,
-                                  horizontalArrangement = Arrangement.SpaceBetween
-                              ) {
-                                  Text("Recent Chats", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
-                                  Text("No history", color = OfflineMuted, fontSize = 15.sp)
-                              }
-                          }
-          
-                          item {
-                              RecentChats(onOpen = { showChat = true })
+                          MaterialTheme(
+                              colorScheme = lightColorScheme(
+                                  primary = Color(0xFF2563EB),
+                                  onPrimary = Color.White,
+                                  background = Color(0xFFF7F9FC),
+                                  onBackground = Color(0xFF111827),
+                                  surface = Color.White,
+                                  onSurface = Color(0xFF111827),
+                                  surfaceVariant = Color(0xFFEFF3F8),
+                                  onSurfaceVariant = Color(0xFF5B6472),
+                                  outline = Color(0xFFD5DCE5)
+                              )
+                          ) {
+                              chatContent()
                           }
                       }
                   }
               }
           }
-          
-          @Composable
-          private fun ModelRequiredPanel(onOpenModels: () -> Unit) {
-              Card(
-                  modifier = Modifier.fillMaxWidth().padding(24.dp),
-                  colors = CardDefaults.cardColors(containerColor = OfflineCard)
-              ) {
-                  Column(
-                      Modifier.fillMaxWidth().padding(24.dp),
-                      verticalArrangement = Arrangement.spacedBy(12.dp),
-                      horizontalAlignment = Alignment.CenterHorizontally
-                  ) {
-                      Text("Local model required", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
-                      Text(
-                          "Download Qwen2.5 0.5B once. After installation, chat runs locally on the phone.",
-                          color = OfflineMuted,
-                          textAlign = TextAlign.Center
-                      )
-                      Button(onClick = onOpenModels) { Text("Open Models") }
-                  }
-              }
-          }
 
           @Composable
-          private fun HeroBrand() {
-              Column(
-                  modifier = Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp),
-                  horizontalAlignment = Alignment.CenterHorizontally
-              ) {
-                  Image(
-                      painter = painterResource(R.drawable.personalai_logo),
-                      contentDescription = "PersonalAI",
-                      modifier = Modifier.size(132.dp)
-                  )
-                  Spacer(Modifier.height(10.dp))
-                  Row(verticalAlignment = Alignment.CenterVertically) {
-                      Text("Offline ", color = Color.White, fontSize = 38.sp, fontWeight = FontWeight.Bold)
-                      Text("AI", color = OfflineBlue, fontSize = 38.sp, fontWeight = FontWeight.Bold)
-                  }
-                  Spacer(Modifier.height(2.dp))
-                  Text(
-                      "On-device  •  Private  •  No Internet",
-                      color = OfflineMuted,
-                      fontSize = 16.sp
-                  )
-              }
-          }
-          
-          @Composable
-          private fun FeatureCard(
-              modifier: Modifier,
-              icon: String,
-              iconBrush: Brush,
-              title: String,
-              subtitle: String,
-              onClick: () -> Unit
+          private fun ChatHeader(
+              onMenu: () -> Unit,
+              onSettings: () -> Unit
           ) {
-              Card(
-                  modifier = modifier.height(154.dp).clickable(onClick = onClick),
-                  shape = RoundedCornerShape(22.dp),
-                  colors = CardDefaults.cardColors(containerColor = OfflineCard)
+              Surface(
+                  color = Color.White,
+                  shadowElevation = 2.dp
               ) {
-                  Column(
-                      Modifier.fillMaxSize().padding(12.dp),
-                      horizontalAlignment = Alignment.CenterHorizontally,
-                      verticalArrangement = Arrangement.Center
-                  ) {
-                      Text(
-                          icon,
-                          color = OfflineBlue,
-                          fontSize = 43.sp,
-                          fontWeight = FontWeight.Light
-                      )
-                      Spacer(Modifier.height(5.dp))
-                      Text(title, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                      Spacer(Modifier.height(3.dp))
-                      Text(subtitle, color = OfflineMuted, fontSize = 14.sp, textAlign = TextAlign.Center)
-                  }
-              }
-          }
-          
-          @Composable
-          private fun RecentChats(onOpen: () -> Unit) {
-              Card(
-                  shape = RoundedCornerShape(22.dp),
-                  colors = CardDefaults.cardColors(containerColor = OfflineCard2)
-              ) {
-                  Text(
-                      "No recent chats yet. Start a chat and it will appear here.",
-                      color = OfflineMuted,
-                      fontSize = 14.sp,
-                      modifier = Modifier.fillMaxWidth().padding(18.dp)
-                  )
-              }
-          }
-
-          @Composable
-          private fun ChatHeader(onBack: () -> Unit) {
-              Surface(color = OfflineBg) {
                   Row(
-                      Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                      Modifier
+                          .fillMaxWidth()
+                          .height(68.dp)
+                          .padding(horizontal = 14.dp),
                       verticalAlignment = Alignment.CenterVertically
                   ) {
-                      Text("←", color = Color.White, fontSize = 34.sp, modifier = Modifier.clickable(onClick = onBack))
-                      Spacer(Modifier.width(12.dp))
+                      Text(
+                          "☰",
+                          color = Color(0xFF1F2937),
+                          fontSize = 27.sp,
+                          modifier = Modifier
+                              .clickable(onClick = onMenu)
+                              .padding(8.dp)
+                      )
+                      Spacer(Modifier.width(8.dp))
+                      Image(
+                          painter = painterResource(R.drawable.personalai_logo),
+                          contentDescription = "PersonalAI",
+                          modifier = Modifier.size(40.dp)
+                      )
+                      Spacer(Modifier.width(9.dp))
                       Column(Modifier.weight(1f)) {
-                          Text("Offline AI", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                          Text(
+                              "PersonalAI",
+                              color = Color(0xFF111827),
+                              fontSize = 20.sp,
+                              fontWeight = FontWeight.Bold
+                          )
                           Row(verticalAlignment = Alignment.CenterVertically) {
-                              Text("●", color = Color(0xFF36D987), fontSize = 13.sp)
-                              Spacer(Modifier.width(6.dp))
-                              Text("On-device  •  Ready", color = OfflineMuted, fontSize = 14.sp)
+                              Text("●", color = Color(0xFF16A34A), fontSize = 10.sp)
+                              Spacer(Modifier.width(5.dp))
+                              Text(
+                                  "Offline • On-device",
+                                  color = Color(0xFF6B7280),
+                                  fontSize = 12.sp
+                              )
                           }
                       }
-                      Text("⋮", color = Color.White, fontSize = 28.sp)
+                      Text(
+                          "⚙",
+                          color = Color(0xFF374151),
+                          fontSize = 24.sp,
+                          modifier = Modifier
+                              .clickable(onClick = onSettings)
+                              .padding(8.dp)
+                      )
                   }
               }
           }
-          
+
           @Composable
           private fun MainScaffold(
               selected: AppScreen,
